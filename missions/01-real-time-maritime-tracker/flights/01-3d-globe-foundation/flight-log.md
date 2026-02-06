@@ -108,6 +108,31 @@ Flight 01 establishing the 3D globe rendering foundation with command-center aes
   - `package.json` — Added `test:screenshots` script
 - **Verification**: Screenshots are presentation-quality, showing full globe with ships, ports, lanes, bloom, vignette, and UI chrome
 
+### Leg 07: docker-production ✅ COMPLETED
+- **Started**: 2026-02-06 00:45 CST
+- **Completed**: 2026-02-06 01:00 CST
+- **Duration**: ~15 minutes
+- **Status**: Docker production build verified
+- **Changes Made**:
+  - `.dockerignore` — Added `playwright.config.ts` exclusion
+  - Existing Dockerfile and docker-compose.yml from leg 01 required no changes
+  - `next.config.ts` already had `output: "standalone"` configured
+- **Verification**:
+  - `docker compose build` — success, no errors
+  - `docker compose up` — container serves on localhost:3000, HTTP 200
+  - Earth texture loads correctly (3.1MB, HTTP 200)
+  - Production image size: **377MB** (under 500MB target)
+  - Multi-stage build with non-root user (nextjs:nodejs)
+  - Container starts in ~2 seconds
+- **Note**: Also fixed postprocessing flicker (EffectComposer multisampling conflict) and rewrote atmosphere shader (FrontSide + additive blending) during this session
+
+---
+
+### Flight 01 Complete ✅
+- **All 8 legs completed** (00-07)
+- **Flight status**: landed
+- **Total duration**: ~87 minutes
+
 ---
 
 ## Decisions

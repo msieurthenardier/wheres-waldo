@@ -1,6 +1,6 @@
 # Flight: 3D Globe Foundation
 
-**Status**: in-flight
+**Status**: landed
 **Mission**: [Real-Time Maritime AI Supply Chain Tracker](../../mission.md)
 
 ## Contributing to Criteria
@@ -135,7 +135,7 @@ function latLonToXYZ(lat: number, lon: number, radius: number): [number, number,
 - [x] `04-post-processing` — Apply post-processing to the R3F scene: selective bloom on emissive materials, vignette for cinematic framing. Configure EffectComposer and EffectPass. Tune bloom threshold and vignette intensity for command-center aesthetic. ⏱️ ~1 hour ✅
 - [x] `05-test-vessels-and-ports` — Load GLTF cargo ship model (or fallback geometry) and render test vessels at known coordinates using InstancedMesh. Create port markers as emissive instanced spheres at major port locations (Shanghai, Rotterdam, Singapore, Los Angeles, Busan). **Stretch goal:** Add shipping lane arcs between port pairs using TubeGeometry or Line with glow if time permits. Prove the full marker pipeline. ⏱️ ~2 hours ✅
 - [x] `06-snapshot-testing` — Set up Playwright with headless Chromium. Write test scripts that launch the app, wait for WebGL render, and capture full-page screenshots of the globe from multiple angles. Store screenshots in a test-artifacts directory. Verify screenshots show globe, ships, and ports. ⏱️ ~45 min ✅
-- [ ] `07-docker-production` — Finalize multi-stage Dockerfile (build stage + production stage). Optimize Next.js build for production. Verify docker-compose up serves the app on localhost. Test that the containerized app renders correctly. Document the build/run commands. ⏱️ ~45 min
+- [x] `07-docker-production` — Finalize multi-stage Dockerfile (build stage + production stage). Optimize Next.js build for production. Verify docker-compose up serves the app on localhost. Test that the containerized app renders correctly. Document the build/run commands. ⏱️ ~45 min
 
 ---
 

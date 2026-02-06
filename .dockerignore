@@ -9,4 +9,5 @@ playwright-report
 missions
 *.md
 !README.md
+playwright.config.ts
 .env*

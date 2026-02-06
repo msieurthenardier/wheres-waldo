@@ -1,6 +1,6 @@
 # Leg: 07-docker-production
 
-**Status**: queued
+**Status**: completed
 **Flight**: [3D Globe Foundation](../flight.md)
 
 ## Objective
