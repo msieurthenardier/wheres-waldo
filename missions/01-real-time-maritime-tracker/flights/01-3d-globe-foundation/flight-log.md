@@ -92,6 +92,24 @@ Flight 01 establishing the 3D globe rendering foundation with command-center aes
 
 ---
 
+### Leg 06: snapshot-testing ✅ COMPLETED
+- **Started**: 2026-02-05 23:25 CST
+- **Completed**: 2026-02-05 23:32 CST
+- **Duration**: ~7 minutes
+- **Status**: Snapshot testing complete and verified
+- **Changes Made**:
+  - Playwright installed and configured with Chromium
+  - `playwright.config.ts` — Dev server on port 3001, 1920x1080 viewport, 60s timeout
+  - `tests/screenshots/globe.spec.ts` — Three test scenarios: default view, zoomed view, rotated view
+  - ReadySignal component in GlobeScene for deterministic wait (data-globe-ready attribute)
+  - Test passes with 3 screenshots captured in `test-artifacts/screenshots/`
+  - Screenshot verification: all > 400KB (well above 50KB threshold), confirmed non-blank
+  - `.gitignore` updated to exclude `test-artifacts/` and `test-results/`
+  - `package.json` — Added `test:screenshots` script
+- **Verification**: Screenshots are presentation-quality, showing full globe with ships, ports, lanes, bloom, vignette, and UI chrome
+
+---
+
 ## Decisions
 
 ### Vessel Geometry: ConeGeometry Fallback
