@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:screenshots": "playwright test"
+    "test:screenshots": "playwright test",
+    "test": "vitest run"
   },
   "dependencies": {
     "@react-three/drei": "^10",
@@ -30,6 +31,8 @@
     "@types/three": "^0.172",
     "eslint": "^9",
     "eslint-config-next": "^15",
-    "typescript": "^5"
+    "tsx": "^4.21.0",
+    "typescript": "^5",
+    "vitest": "^4.0.18"
   }
 }
