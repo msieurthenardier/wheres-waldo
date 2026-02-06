@@ -5,15 +5,16 @@
 
 ## Objective
 
-Create the dark command-center UI shell around the 3D canvas and apply post-processing effects (selective bloom, vignette) to establish the visual language.
+Create the dark command-center UI shell around the 3D canvas. Focus on chrome only (layout, colors, fonts) — post-processing effects are deferred to leg 04.
 
 ## Context
 
 - Design decision: Dark, high-contrast "command center / video game" aesthetic (see mission.md)
-- Design decision: @react-three/postprocessing for bloom + vignette (see flight.md)
-- The globe is rendering from leg 02 — this leg wraps it in the UI chrome and adds visual polish
+- The globe is rendering from leg 02 — this leg wraps it in the UI chrome
+- Post-processing (bloom, vignette) is handled in leg 04 — this leg focuses on layout and styling
 - The UI layout must accommodate future panels: top bar for filters/search, right sidebar for details
 - Think "XCOM command screen" or "EVE Online star map" — not a corporate dashboard
+- Estimated duration: ~1.5 hours
 
 ## Inputs
 
@@ -25,7 +26,6 @@ Create the dark command-center UI shell around the 3D canvas and apply post-proc
 
 - Top bar component with title, placeholder filter chips, and status indicators
 - Collapsible right sidebar with placeholder content
-- Post-processing pipeline applied to the R3F scene
 - Consistent color palette and typography established
 - The full-page layout with globe as the hero element
 
@@ -34,8 +34,6 @@ Create the dark command-center UI shell around the 3D canvas and apply post-proc
 - [ ] A top bar renders across the top with the app title "WHERE'S WALDO" (or similar), styled with glow/accent colors
 - [ ] A right sidebar panel exists, collapsible, with placeholder "Selected Entity" content
 - [ ] The globe canvas fills the remaining viewport (full height minus top bar, full width minus sidebar when open)
-- [ ] Selective bloom post-processing is active — emissive materials glow, non-emissive materials do not
-- [ ] Vignette post-processing darkens the screen edges for cinematic framing
 - [ ] The color palette uses deep blacks (#000000-#0a0a0f), accent cyan/teal (#00fff2-#0ff), and high-contrast white text
 - [ ] Monospace or technical font is used for data/labels (e.g., JetBrains Mono, Space Mono, or similar from Google Fonts)
 - [ ] The overall aesthetic reads as "command center / video game" — not a generic dashboard
@@ -46,8 +44,6 @@ Create the dark command-center UI shell around the 3D canvas and apply post-proc
 - Open localhost:3000 and confirm the dark UI chrome wraps the globe
 - Verify the top bar is visible with title and accent styling
 - Click the sidebar toggle and confirm it opens/closes
-- Verify bloom effect: atmosphere glow should bloom, the dark ocean should not
-- Verify vignette: edges of the screen should be visibly darker than center
 - Resize to mobile width and confirm layout adapts
 
 ## Implementation Guidance
@@ -99,24 +95,7 @@ Create the dark command-center UI shell around the 3D canvas and apply post-proc
    - Sections separated by thin accent-colored dividers
    - Collapse/expand with a chevron button
 
-6. **Add post-processing to GlobeScene**
-   ```tsx
-   import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
-
-   <EffectComposer>
-     <Bloom
-       luminanceThreshold={0.6}
-       luminanceSmoothing={0.9}
-       intensity={1.5}
-     />
-     <Vignette eskil={false} offset={0.1} darkness={0.8} />
-   </EffectComposer>
-   ```
-   - Bloom threshold at 0.6 means only emissive/bright materials bloom (atmosphere glow, future port markers)
-   - Vignette offset and darkness tuned for subtle cinematic framing
-   - These go inside the `<Canvas>` component in GlobeScene.tsx
-
-7. **Update page layout**
+6. **Update page layout**
    - `page.tsx` uses `<Layout>` wrapping `<GlobeScene />`
    - Globe canvas should use `position: absolute; inset: 0` within its container for full-bleed rendering
    - Top bar and sidebar overlay the canvas with semi-transparent backgrounds
@@ -124,7 +103,6 @@ Create the dark command-center UI shell around the 3D canvas and apply post-proc
 ## Edge Cases
 
 - **Z-index layering**: The R3F Canvas renders in a WebGL context. HTML UI elements (top bar, sidebar) must be positioned above it with appropriate z-index. Use a wrapper div structure rather than trying to mix HTML and R3F.
-- **Bloom intensity**: Too much bloom makes the scene look washed out. Start conservative (intensity 1.0-1.5) and adjust.
 - **Font loading flash**: Use `next/font` with `display: 'swap'` to prevent layout shifts during font loading.
 - **Sidebar width on small screens**: On screens < 768px, sidebar should be hidden by default and overlay full-width when opened.
 - **Transparency + blur support**: `backdrop-filter: blur()` has good browser support but can be GPU-intensive. Provide a solid fallback.
@@ -137,7 +115,6 @@ Create the dark command-center UI shell around the 3D canvas and apply post-proc
 - `src/components/ui/TopBar.tsx` — Created
 - `src/components/ui/Sidebar.tsx` — Created
 - `src/components/ui/Layout.tsx` — Created
-- `src/components/scene/GlobeScene.tsx` — Modified (add EffectComposer, Bloom, Vignette)
 - `tailwind.config.ts` — Modified (add custom colors from CSS variables)
 
 ---

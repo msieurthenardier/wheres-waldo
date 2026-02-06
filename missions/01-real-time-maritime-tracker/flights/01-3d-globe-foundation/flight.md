@@ -1,6 +1,6 @@
 # Flight: 3D Globe Foundation
 
-**Status**: planning
+**Status**: in-flight
 **Mission**: [Real-Time Maritime AI Supply Chain Tracker](../../mission.md)
 
 ## Contributing to Criteria
@@ -128,7 +128,7 @@ function latLonToXYZ(lat: number, lon: number, radius: number): [number, number,
 
 > **Note:** These are tentative suggestions, not commitments. Legs are planned and created one at a time as the flight progresses. This list will evolve based on discoveries during implementation.
 
-- [ ] `00-asset-sourcing` — Download and verify NASA Blue Marble/Black Marble dark Earth texture (~8K resolution). Source free GLTF cargo ship model from Sketchfab or similar. Test-load both assets in Three.js to confirm format compatibility. **Fallback:** If GLTF sourcing exceeds 20 minutes, use simplified colored cone geometry for ships. ⏱️ ~30 min
+- [x] `00-asset-sourcing` — Download and verify NASA Blue Marble/Black Marble dark Earth texture (~8K resolution). Source free GLTF cargo ship model from Sketchfab or similar. Test-load both assets in Three.js to confirm format compatibility. **Fallback:** If GLTF sourcing exceeds 20 minutes, use simplified colored cone geometry for ships. ⏱️ ~30 min ✅
 - [ ] `01-project-scaffold` — Initialize Next.js 15 + React 19 + TypeScript project. Install Three.js/R3F/drei/postprocessing. Set up Tailwind CSS. Create project structure with placeholder components. Add initial Dockerfile and docker-compose.yml. Verify the app boots with a basic R3F canvas. ⏱️ ~1 hour
 - [ ] `02-globe-core` — Build the custom globe component: SphereGeometry with dark Earth texture, atmospheric limb glow shader, OrbitControls for navigation (rotate/zoom/tilt). Implement the lat/lon → xyz coordinate projection utility. Globe renders centered in viewport with smooth interaction. ⏱️ ~1.5 hours
 - [ ] `03-command-center-chrome` — Create the UI shell: dark theme via Tailwind + CSS variables, top bar with title/placeholder controls, collapsible right sidebar, main canvas area. Establish the visual language — fonts, colors, layout structure. Focus on chrome only, defer post-processing to next leg. ⏱️ ~1.5 hours
