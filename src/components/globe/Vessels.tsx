@@ -7,6 +7,7 @@ import type { EnrichedVesselPosition } from "@/lib/ais";
 import { COMMODITIES } from "@/lib/commodity";
 
 const DEFAULT_COLOR = new THREE.Color("#00fff2");
+const MAX_VISIBLE_VESSELS = 5000;
 
 function getCommodityColor(commodity: string | null): THREE.Color {
   if (!commodity) return DEFAULT_COLOR;
@@ -21,18 +22,24 @@ interface VesselsProps {
 
 export default function Vessels({ vessels }: VesselsProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
-  const count = vessels.length;
+
+  // Cap vessel count for performance
+  const visibleVessels = useMemo(
+    () => (vessels.length > MAX_VISIBLE_VESSELS ? vessels.slice(0, MAX_VISIBLE_VESSELS) : vessels),
+    [vessels]
+  );
+  const count = visibleVessels.length;
 
   const colorArray = useMemo(() => {
     const arr = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
-      const color = getCommodityColor(vessels[i].commodity);
+      const color = getCommodityColor(visibleVessels[i].commodity);
       arr[i * 3] = color.r;
       arr[i * 3 + 1] = color.g;
       arr[i * 3 + 2] = color.b;
     }
     return arr;
-  }, [vessels, count]);
+  }, [visibleVessels, count]);
 
   useEffect(() => {
     if (!meshRef.current) return;
@@ -41,13 +48,12 @@ export default function Vessels({ vessels }: VesselsProps) {
     const up = new THREE.Vector3();
     const forward = new THREE.Vector3();
 
-    vessels.forEach((vessel, i) => {
+    visibleVessels.forEach((vessel, i) => {
       const pos = latLonToVector3(vessel.lat, vessel.lon, 1.01);
       dummy.position.copy(pos);
 
       up.copy(pos).normalize();
 
-      // Heading fallback: heading -> cog -> 0
       const headingDeg = !isNaN(vessel.heading)
         ? vessel.heading
         : !isNaN(vessel.cog)
@@ -66,10 +72,10 @@ export default function Vessels({ vessels }: VesselsProps) {
       dummy.lookAt(lookTarget);
       dummy.rotateX(Math.PI / 2);
 
-      // Scale by estimated value (larger vessels = bigger markers)
-      const valueScale = vessel.estimatedValueUsd > 0
-        ? Math.min(2.0, 0.8 + Math.log10(vessel.estimatedValueUsd) / 10)
-        : 1.0;
+      const valueScale =
+        vessel.estimatedValueUsd > 0
+          ? Math.min(2.0, 0.8 + Math.log10(vessel.estimatedValueUsd) / 10)
+          : 1.0;
       const base = 0.012 * valueScale;
       const height = 0.025 * valueScale;
       dummy.scale.set(base, height, base);
@@ -78,12 +84,17 @@ export default function Vessels({ vessels }: VesselsProps) {
     });
 
     meshRef.current.instanceMatrix.needsUpdate = true;
-  }, [vessels]);
+  }, [visibleVessels]);
 
   if (count === 0) return null;
 
   return (
-    <instancedMesh key={count} ref={meshRef} args={[undefined, undefined, count]}>
+    <instancedMesh
+      key={count}
+      ref={meshRef}
+      args={[undefined, undefined, count]}
+      frustumCulled={false}
+    >
       <coneGeometry args={[1, 2, 6]} />
       <meshStandardMaterial
         vertexColors

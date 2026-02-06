@@ -33,7 +33,7 @@ export default function Sidebar() {
 
       {/* Panel */}
       <aside
-        className={`pointer-events-auto absolute top-12 right-0 bottom-0 z-10 w-80 border-l border-[var(--border-subtle)] bg-black/80 backdrop-blur-md transition-transform duration-300 ${
+        className={`pointer-events-auto absolute top-12 right-0 bottom-0 z-10 w-full border-l border-[var(--border-subtle)] bg-black/80 backdrop-blur-md transition-transform duration-300 sm:w-80 ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
