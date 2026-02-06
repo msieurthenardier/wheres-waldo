@@ -40,6 +40,12 @@ Flight 02 establishes the real-time AIS data pipeline connecting AISStream.io's 
 - **Completed**: 2026-02-06
 - **Summary**: Created .env.local.example template with AISSTREAM_API_KEY and AIS_UPSTREAM_URL placeholders. Fixed .gitignore to not ignore the example file (added !.env.local.example negation after .env* glob). Documented AISStream.io registration at https://aisstream.io/. Manual verification requires user to register for free API key and set env vars before running dev:server. The pipeline is ready for live data: set AISSTREAM_API_KEY and AIS_UPSTREAM_URL=wss://stream.aisstream.io/v0/stream in shell, run dev:server.
 
+### Leg 05: Docker and Scripts
+- **Status**: completed
+- **Started**: 2026-02-06
+- **Completed**: 2026-02-06
+- **Summary**: Added esbuild as devDependency. Created build:server script that bundles src/server/index.ts into .next/standalone/server.js (12.6kb) with next and ws as externals, replacing the default Next.js standalone server. Updated Dockerfile to run build:server after next build. Updated docker-compose.yml to pass AISSTREAM_API_KEY and AIS_UPSTREAM_URL environment variables from host. Updated start script to use the bundled custom server. All 45 tests passing, zero TypeScript errors.
+
 ---
 
 ## Decisions

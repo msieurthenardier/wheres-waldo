@@ -1,6 +1,6 @@
 # Flight: AIS Data Pipeline
 
-**Status**: in-flight
+**Status**: landed
 **Mission**: [Real-Time Maritime AI Supply Chain Tracker](../../mission.md)
 
 ## Contributing to Criteria
@@ -140,7 +140,7 @@ Build a layered real-time data pipeline with four distinct concerns:
 
 - [x] `04-live-ais-integration` — Configure the relay server with real AISStream.io bounding boxes covering AI supply chain routes. Add `AISSTREAM_API_KEY` to `.env.local` (gitignored). Connect to the real AISStream.io endpoint and verify live vessel data flows through to the globe. Tune bounding boxes and ship type filters based on observed data volume. Document the connection flow and any observed rate limits or data characteristics. Manual verification with screenshots. ⏱️ ~1 hour
 
-- [ ] `05-docker-and-scripts` — Update the Dockerfile to use the custom server entrypoint instead of `next start`. Add/update npm scripts: `dev:server` (custom server with hot reload), `dev:mock` (mock AIS server), `start` (production custom server). Update `docker-compose.yml` to pass `AISSTREAM_API_KEY` and `AIS_UPSTREAM_URL` as environment variables. Verify `docker compose up` runs the full pipeline. Update any configuration documentation. ⏱️ ~1 hour
+- [x] `05-docker-and-scripts` — Update the Dockerfile to use the custom server entrypoint instead of `next start`. Add/update npm scripts: `dev:server` (custom server with hot reload), `dev:mock` (mock AIS server), `start` (production custom server). Update `docker-compose.yml` to pass `AISSTREAM_API_KEY` and `AIS_UPSTREAM_URL` as environment variables. Verify `docker compose up` runs the full pipeline. Update any configuration documentation. ⏱️ ~1 hour
 
 ---
 
