@@ -1,57 +1,33 @@
 # Where's Waldo
 
-Real-time maritime AI supply chain tracker. Watch ships carrying semiconductors, lithium, cobalt, rare earths, nickel, and copper move across the globe in real time.
+Real-time maritime AI supply chain tracker. Hundreds of real cargo and tanker vessels rendered as 3D ship models on a daytime Earth globe, with commodity classification, value estimation, and click-to-inspect interactivity.
 
 ## What It Does
 
 A 3D globe visualization showing the world's AI-critical supply chains:
 
-- **Real-time vessel tracking** via AIS data (AISStream.io WebSocket)
-- **Commodity classification** — vessels classified by cargo type using AIS ship type codes, destination ports, and proximity heuristics
-- **Value estimation** — estimated cargo value based on vessel dimensions and commodity prices
+- **Real vessel data** — 427 cargo and tanker ships from a live AIS snapshot, at their actual ocean positions
+- **Commodity classification** — vessels classified by cargo type (semiconductors, lithium, cobalt, rare earths, nickel, copper)
+- **Value estimation** — estimated cargo value based on vessel size and commodity prices
+- **Click to inspect** — click any vessel or port to see details in the sidebar
 - **31 key ports** across 9 regions with commodity-specific trade routes
 - **Interactive filters** — toggle commodities on/off, search by vessel name or MMSI
-- **Detail panel** — vessel and port information with global statistics
 
 ## Tech Stack
 
 - **Frontend**: Next.js 15, React 19, Three.js (react-three-fiber), Tailwind CSS 4
-- **3D**: Instanced meshes, great-circle arc rendering, post-processing (Bloom, Vignette)
-- **Backend**: Custom WebSocket server relaying AIS data to browser clients
-- **Data**: AISStream.io (free), bundled commodity/port reference data
+- **3D**: GLTF ship models, instanced meshes (12k capacity), great-circle arcs, post-processing (Bloom, Vignette)
+- **Data**: Bundled AIS snapshot (real vessel positions), commodity/port reference data
+- **Deployment**: GitHub Pages static export — zero configuration, no backend
 
 ## Getting Started
 
 ```bash
 npm install
-```
-
-### Development (with mock AIS data)
-
-```bash
-# Terminal 1: Mock AIS server
-npm run dev:mock
-
-# Terminal 2: App server (WebSocket relay + Next.js)
-npm run dev:server
-
-# Terminal 3: Next.js frontend (with Turbopack)
 npm run dev
 ```
 
-### Development (with live AIS data)
-
-1. Register at [aisstream.io](https://aisstream.io/) for a free API key
-2. Copy `.env.local.example` to `.env.local` and set your key
-3. Run `npm run dev:server` and `npm run dev`
-
-### Production
-
-```bash
-npm run build
-npm run build:server
-npm start
-```
+Open [http://localhost:3000](http://localhost:3000).
 
 ## Commodities Tracked
 
@@ -64,42 +40,31 @@ npm start
 | Nickel | Cyan | Sulawesi (Morowali), Surigao, Manila |
 | Copper | Orange | Antofagasta, Callao, Santos |
 
-## Deployment
-
-### GitHub Pages (static demo)
-
-Automated via `.github/workflows/pages.yml` on push to `main`. Runs without a backend — uses demo vessel data.
-
-### Vercel / Cloudflare (full-stack)
-
-Deploy as a standard Next.js app. Set environment variables:
-
-```
-AISSTREAM_API_KEY=your_key
-AIS_UPSTREAM_URL=wss://stream.aisstream.io/v0/stream
-```
-
 ## Architecture
 
 ```
-Browser
+Browser (static — no backend required)
   ├── 3D Globe (Three.js / react-three-fiber)
-  │   ├── Earth sphere with night map texture
+  │   ├── Earth sphere with 8K daytime texture
   │   ├── Atmosphere shader (rim glow)
-  │   ├── Vessel instances (cone geometry, commodity-colored)
+  │   ├── GLTF ship model instances (commodity-colored)
   │   ├── Port markers (sphere geometry, throughput-scaled)
   │   ├── Shipping lanes (great-circle arcs, commodity-colored)
+  │   ├── Click raycasting (invisible picking spheres)
   │   └── Post-processing (Bloom + Vignette)
   └── UI Chrome (React / Tailwind)
-      ├── TopBar (filters, search, live indicator)
-      └── Sidebar (stats, details, port list)
+      ├── TopBar (commodity filters, search)
+      └── Sidebar (vessel/port details, stats, port list)
 
-Server
-  ├── Upstream: WebSocket to AISStream.io
-  ├── VesselStore: In-memory position + static data
-  ├── Commodity Enrichment: Classification + valuation on static data receipt
-  └── Downstream: WebSocket broadcast to browser clients
+Data
+  └── public/data/ais-snapshot.json (427 real vessels from AISStream.io)
 ```
+
+## Asset Attribution
+
+- **Earth Texture**: [Solar System Scope](https://www.solarsystemscope.com/textures/) — 8K daytime Blue Marble, CC BY 4.0
+- **Ship Model**: [FetchCFD Cargo Ship](https://fetchcfd.com/threeDViewGltf/1491-cargo-ship-3d-model) — optimized with gltfjsx (35MB → 319KB)
+- **AIS Data**: [AISStream.io](https://aisstream.io/) — real-time vessel positions, free API
 
 ## License
 
