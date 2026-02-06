@@ -89,10 +89,10 @@ export default function GlobeScene() {
       </Canvas>
       <div className="absolute bottom-4 left-4 z-10 font-[family-name:var(--font-mono)] text-[10px] text-[var(--text-secondary)]">
         {status === "connected"
-          ? `LIVE — ${filteredVessels.length} vessels`
+          ? `${filteredVessels.length.toLocaleString()} vessels — AIS snapshot`
           : status === "connecting"
-            ? "Connecting to AIS stream..."
-            : "Using demo data"}
+            ? "Loading vessel data..."
+            : "Failed to load data"}
       </div>
     </div>
   );

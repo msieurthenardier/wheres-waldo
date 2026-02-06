@@ -1,148 +1,70 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import type {
-  AISStreamEnvelope,
-  AISStreamSubscription,
-  EnrichedVesselPosition,
-  VesselPosition,
-  VesselStatic,
-} from "@/lib/ais";
-import { parsePositionReport, parseShipStaticData, VesselStore } from "@/lib/ais";
-import { enrichVessel } from "@/lib/commodity";
-import { TEST_VESSELS } from "@/data/test-markers";
+import { useState, useEffect } from "react";
+import type { EnrichedVesselPosition } from "@/lib/ais";
+import type { CommodityId } from "@/lib/commodity";
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 
-// In development, connect through the local relay (scripts/ais-relay.mjs)
-// which strips the Origin header that AISStream.io rejects from browsers.
-// In production (GitHub Pages), there's no relay — use static snapshot data.
-const AIS_RELAY_URL =
-  process.env.NEXT_PUBLIC_AIS_RELAY_URL || "ws://localhost:4001";
-const AISSTREAM_API_KEY =
-  process.env.NEXT_PUBLIC_AISSTREAM_API_KEY || "7f7b4857052f93ddaac1d413ae4b82b23ee0a3e8";
-
-const INITIAL_BACKOFF_MS = 1_000;
-const MAX_BACKOFF_MS = 30_000;
-const BACKOFF_MULTIPLIER = 2;
-
-/** Give up connecting after this many consecutive failures */
-const MAX_RETRIES = 3;
-
-/** How often to flush vessel state to React (ms) */
-const FLUSH_INTERVAL_MS = 2_000;
-
-// Global bounding boxes — full world coverage
-const GLOBAL_BBOXES: [number, number][][] = [
-  [[-90, -180], [90, 180]],
-];
-
-// ─── Fallback Data ──────────────────────────────────────────────────────────
-
-const FALLBACK_VESSELS: EnrichedVesselPosition[] = TEST_VESSELS.map((v) => ({
-  mmsi: v.id,
-  lat: v.lat,
-  lon: v.lon,
-  cog: v.heading,
-  sog: v.speed,
-  heading: v.heading,
-  navStatus: 0,
-  timestamp: Date.now(),
-  shipName: `Test ${v.id}`,
-  commodity:
-    v.type === "container"
-      ? "semiconductors"
-      : v.type === "bulk"
-        ? "copper"
-        : "lithium",
-  estimatedValueUsd: 0,
-}));
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+const SNAPSHOT_URL = `${basePath}/data/ais-snapshot.json`;
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 export type ConnectionStatus = "connecting" | "connected" | "disconnected";
 
-// ─── Pure Message Processor (exported for testing) ──────────────────────────
-
-export function processAISEnvelope(
-  store: VesselStore,
-  envelope: AISStreamEnvelope
-): boolean {
-  if (
-    envelope.MessageType === "PositionReport" ||
-    envelope.MessageType === "StandardClassBCSPositionReport"
-  ) {
-    const pos = parsePositionReport(envelope);
-    if (pos) {
-      store.updatePosition(pos);
-
-      // Enrich using position proximity if no static data yet
-      const record = store.get(pos.mmsi);
-      if (record && !record.enrichment) {
-        const fakeStatic: VesselStatic = {
-          mmsi: pos.mmsi,
-          name: pos.shipName,
-          callSign: "",
-          imo: 0,
-          shipType: 70, // default cargo
-          destination: "",
-          dimBow: 0,
-          dimStern: 0,
-          dimPort: 0,
-          dimStarboard: 0,
-          draught: 0,
-          eta: null,
-          timestamp: pos.timestamp,
-        };
-        const enrichment = enrichVessel(fakeStatic, pos);
-        record.enrichment = {
-          commodity: enrichment.commodity,
-          confidence: enrichment.confidence,
-          estimatedValueUsd: enrichment.estimatedValueUsd,
-          dwtEstimate: enrichment.dwtEstimate,
-        };
-      }
-      return true;
-    }
-  }
-
-  if (envelope.MessageType === "ShipStaticData") {
-    const staticData = parseShipStaticData(envelope);
-    if (staticData) {
-      store.updateStatic(staticData);
-
-      // Re-enrich with actual static data
-      const record = store.get(staticData.mmsi);
-      if (record) {
-        const enrichment = enrichVessel(staticData, record.position);
-        record.enrichment = {
-          commodity: enrichment.commodity,
-          confidence: enrichment.confidence,
-          estimatedValueUsd: enrichment.estimatedValueUsd,
-          dwtEstimate: enrichment.dwtEstimate,
-        };
-      }
-      return true;
-    }
-  }
-
-  return false;
+export interface SnapshotVessel {
+  mmsi: number;
+  lat: number;
+  lon: number;
+  cog: number;
+  sog: number;
+  heading: number;
+  navStatus: number;
+  timestamp: number;
+  shipName: string;
+  shipType: number;
+  destination: string;
+  length: number;
 }
 
-/** Convert VesselStore records to EnrichedVesselPosition array */
-function storeToEnrichedPositions(
-  store: VesselStore
-): EnrichedVesselPosition[] {
-  const result: EnrichedVesselPosition[] = [];
-  for (const [, record] of store.getAll()) {
-    if (!record.position) continue;
-    result.push({
-      ...record.position,
-      commodity: record.enrichment?.commodity ?? null,
-      estimatedValueUsd: record.enrichment?.estimatedValueUsd ?? 0,
-    });
+// ─── Commodity Assignment ───────────────────────────────────────────────────
+
+const CARGO_COMMODITIES: CommodityId[] = [
+  "semiconductors",
+  "copper",
+  "rare_earths",
+  "nickel",
+  "cobalt",
+];
+const TANKER_COMMODITIES: CommodityId[] = ["lithium", "cobalt"];
+
+/** Assign a commodity based on ship type for visual variety */
+export function assignCommodity(v: SnapshotVessel): CommodityId | null {
+  if (v.shipType >= 70 && v.shipType <= 79) {
+    return CARGO_COMMODITIES[v.mmsi % CARGO_COMMODITIES.length];
   }
-  return result;
+  if (v.shipType >= 80 && v.shipType <= 89) {
+    return TANKER_COMMODITIES[v.mmsi % TANKER_COMMODITIES.length];
+  }
+  return null;
+}
+
+/** Rough cargo value estimate based on commodity and ship length */
+export function estimateValue(commodity: CommodityId | null, length: number): number {
+  if (!commodity || length === 0) return 0;
+  // Larger ships carry more — use length as a rough proxy for DWT
+  const dwtEstimate = length > 200 ? 80_000 : length > 100 ? 30_000 : 5_000;
+  const densities: Record<string, number> = {
+    semiconductors: 50_000_000,
+    lithium: 25_000,
+    cobalt: 30_000,
+    rare_earths: 200_000,
+    nickel: 18_000,
+    copper: 9_000,
+  };
+  const density = densities[commodity] ?? 0;
+  return dwtEstimate * density * 0.001; // rough scale factor
 }
 
 // ─── Hook ───────────────────────────────────────────────────────────────────
@@ -151,158 +73,48 @@ export function useAISStream(): {
   vessels: EnrichedVesselPosition[];
   status: ConnectionStatus;
 } {
-  const [vessels, setVessels] =
-    useState<EnrichedVesselPosition[]>(FALLBACK_VESSELS);
-  const [status, setStatus] = useState<ConnectionStatus>("disconnected");
-
-  const wsRef = useRef<WebSocket | null>(null);
-  const storeRef = useRef(new VesselStore({ ttlMs: 900_000 }));
-  const mountedRef = useRef(true);
-  const backoffRef = useRef(INITIAL_BACKOFF_MS);
-  const retriesRef = useRef(0);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const flushTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const dirtyRef = useRef(false);
-
-  const flush = useCallback(() => {
-    if (dirtyRef.current && mountedRef.current) {
-      storeRef.current.evictStale();
-      setVessels(storeToEnrichedPositions(storeRef.current));
-      dirtyRef.current = false;
-    }
-  }, []);
-
-  const cleanup = useCallback(() => {
-    if (reconnectTimerRef.current) {
-      clearTimeout(reconnectTimerRef.current);
-      reconnectTimerRef.current = null;
-    }
-    if (flushTimerRef.current) {
-      clearInterval(flushTimerRef.current);
-      flushTimerRef.current = null;
-    }
-    if (wsRef.current) {
-      wsRef.current.onopen = null;
-      wsRef.current.onmessage = null;
-      wsRef.current.onclose = null;
-      wsRef.current.onerror = null;
-      wsRef.current.close();
-      wsRef.current = null;
-    }
-  }, []);
-
-  const scheduleReconnect = useCallback(
-    (connectFn: () => void) => {
-      if (!mountedRef.current) return;
-      if (reconnectTimerRef.current) return;
-
-      const delay = backoffRef.current;
-
-      reconnectTimerRef.current = setTimeout(() => {
-        reconnectTimerRef.current = null;
-        connectFn();
-      }, delay);
-
-      backoffRef.current = Math.min(
-        backoffRef.current * BACKOFF_MULTIPLIER,
-        MAX_BACKOFF_MS
-      );
-    },
-    []
-  );
+  const [vessels, setVessels] = useState<EnrichedVesselPosition[]>([]);
+  const [status, setStatus] = useState<ConnectionStatus>("connecting");
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    let cancelled = false;
 
-    mountedRef.current = true;
+    async function loadSnapshot() {
+      try {
+        const res = await fetch(SNAPSHOT_URL);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data: SnapshotVessel[] = await res.json();
 
-    const connect = () => {
-      if (!mountedRef.current) return;
+        if (cancelled) return;
 
-      // Stop retrying after MAX_RETRIES failures
-      if (retriesRef.current >= MAX_RETRIES) {
-        console.log("[AIS] Max retries reached, using demo data. Run: node scripts/ais-relay.mjs");
-        setStatus("disconnected");
-        return;
-      }
+        const enriched: EnrichedVesselPosition[] = data.map((v) => {
+          const commodity = assignCommodity(v);
+          return {
+            mmsi: String(v.mmsi),
+            lat: v.lat,
+            lon: v.lon,
+            cog: v.cog,
+            sog: v.sog,
+            heading: v.heading,
+            navStatus: v.navStatus,
+            timestamp: v.timestamp,
+            shipName: v.shipName,
+            commodity,
+            estimatedValueUsd: estimateValue(commodity, v.length),
+          };
+        });
 
-      cleanup();
-      setStatus("connecting");
-      retriesRef.current++;
-
-      const ws = new WebSocket(AIS_RELAY_URL);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        if (!mountedRef.current) return;
-
-        console.log("[AIS] Connected to relay, sending subscription...");
-
-        // Send subscription (relayed transparently to AISStream.io)
-        // Note: AISStream.io sends StandardClassBCSPositionReport messages
-        // automatically — do NOT include it in FilterMessageTypes (unsupported).
-        const subscription: AISStreamSubscription = {
-          APIKey: AISSTREAM_API_KEY,
-          BoundingBoxes: GLOBAL_BBOXES,
-          FilterMessageTypes: [
-            "PositionReport",
-            "ShipStaticData",
-          ],
-        };
-        ws.send(JSON.stringify(subscription));
-
+        setVessels(enriched);
         setStatus("connected");
-        backoffRef.current = INITIAL_BACKOFF_MS;
-        retriesRef.current = 0;
+      } catch (err) {
+        console.error("[AIS] Failed to load snapshot:", err);
+        if (!cancelled) setStatus("disconnected");
+      }
+    }
 
-        // Start periodic flush
-        flushTimerRef.current = setInterval(flush, FLUSH_INTERVAL_MS);
-      };
-
-      ws.onmessage = (event: MessageEvent) => {
-        if (!mountedRef.current) return;
-
-        let envelope: AISStreamEnvelope;
-        try {
-          envelope = JSON.parse(event.data as string) as AISStreamEnvelope;
-        } catch {
-          console.warn("[AIS] Failed to parse message:", (event.data as string).slice(0, 200));
-          return;
-        }
-
-        const changed = processAISEnvelope(storeRef.current, envelope);
-        if (changed) {
-          dirtyRef.current = true;
-        }
-      };
-
-      ws.onclose = (event) => {
-        if (!mountedRef.current) return;
-        console.log(`[AIS] WebSocket closed: code=${event.code} reason="${event.reason}"`);
-        setStatus("disconnected");
-
-        // Keep whatever data we have — don't reset to fallback
-        // if we already received real data
-        if (storeRef.current.size === 0) {
-          setVessels(FALLBACK_VESSELS);
-        }
-
-        scheduleReconnect(connect);
-      };
-
-      ws.onerror = (event) => {
-        console.error("[AIS] WebSocket error:", event);
-        // close event fires after error — reconnection handled there
-      };
-    };
-
-    connect();
-
-    return () => {
-      mountedRef.current = false;
-      cleanup();
-    };
-  }, [cleanup, flush, scheduleReconnect]);
+    loadSnapshot();
+    return () => { cancelled = true; };
+  }, []);
 
   return { vessels, status };
 }
