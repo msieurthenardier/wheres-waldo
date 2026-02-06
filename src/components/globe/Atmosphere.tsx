@@ -4,12 +4,12 @@ import { useMemo } from "react";
 import * as THREE from "three";
 
 const atmosphereVertexShader = `
-  varying vec3 vNormal;
-  varying vec3 vPosition;
+  varying vec3 vWorldNormal;
+  varying vec3 vWorldPosition;
   void main() {
-    vNormal = normalize(normalMatrix * normal);
-    vPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
+    vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+    gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
   }
 `;
 
@@ -17,13 +17,15 @@ const atmosphereFragmentShader = `
   uniform vec3 glowColor;
   uniform float intensity;
   uniform float power;
-  varying vec3 vNormal;
-  varying vec3 vPosition;
+  varying vec3 vWorldNormal;
+  varying vec3 vWorldPosition;
   void main() {
-    vec3 viewDir = normalize(-vPosition);
-    float fresnel = 1.0 - dot(viewDir, vNormal);
-    fresnel = pow(fresnel, power) * intensity;
-    gl_FragColor = vec4(glowColor, fresnel);
+    vec3 viewDir = normalize(cameraPosition - vWorldPosition);
+    float rim = 1.0 - max(0.0, dot(viewDir, vWorldNormal));
+    float edgeGlow = pow(rim, power) * intensity;
+    float innerGlow = pow(rim, 2.0) * intensity * 0.3;
+    float glow = edgeGlow + innerGlow;
+    gl_FragColor = vec4(glowColor * glow, glow);
   }
 `;
 
@@ -36,9 +38,9 @@ interface AtmosphereProps {
 
 export default function Atmosphere({
   color = "#4da6ff",
-  intensity = 1.5,
-  power = 3.0,
-  radius = 1.12,
+  intensity = 0.35,
+  power = 6.0,
+  radius = 1.005,
 }: AtmosphereProps) {
   const uniforms = useMemo(
     () => ({
@@ -58,7 +60,8 @@ export default function Atmosphere({
         uniforms={uniforms}
         transparent
         depthWrite={false}
-        side={THREE.BackSide}
+        blending={THREE.AdditiveBlending}
+        side={THREE.FrontSide}
       />
     </mesh>
   );

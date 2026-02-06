@@ -45,11 +45,11 @@ export default function GlobeScene() {
           autoRotate
           autoRotateSpeed={0.3}
         />
-        <EffectComposer>
+        <EffectComposer multisampling={0}>
           <Bloom
-            luminanceThreshold={0.6}
-            luminanceSmoothing={0.9}
-            intensity={1.5}
+            luminanceThreshold={0.9}
+            luminanceSmoothing={0.2}
+            intensity={0.3}
           />
           <Vignette offset={0.1} darkness={0.8} />
         </EffectComposer>
