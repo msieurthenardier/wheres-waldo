@@ -28,6 +28,12 @@ Flight 02 establishes the real-time AIS data pipeline connecting AISStream.io's 
 - **Completed**: 2026-02-06
 - **Summary**: Created custom Next.js server entry point (src/server/index.ts) with WebSocket upgrade handling on /ws/ais. UpstreamManager (src/server/upstream.ts) connects to AIS_UPSTREAM_URL with exponential backoff reconnection (1s-30s), sends AISStreamSubscription with bounding boxes, parses messages into shared VesselStore, and runs periodic stale vessel eviction. DownstreamManager (src/server/downstream.ts) manages browser WebSocket connections using noServer mode, sends full VesselPosition snapshot on connect, broadcasts delta position/static updates. Added dev:server script with tsx --watch. 3 integration tests verifying full pipeline (mock→relay→client), snapshot delivery, and path rejection. All 38 tests passing, zero TypeScript errors.
 
+### Leg 03: Frontend AIS Hook
+- **Status**: completed
+- **Started**: 2026-02-06
+- **Completed**: 2026-02-06
+- **Summary**: Created useAISStream React hook (src/hooks/useAISStream.ts) that connects to /ws/ais via browser WebSocket, handles snapshot/position/static messages with requestAnimationFrame-based batching, reconnects with exponential backoff, and falls back to TEST_VESSELS on disconnect. Updated Vessels component to accept VesselPosition[] props with NaN heading fallback chain and dynamic InstancedMesh resizing via key={count}. Wired hook into GlobeScene outside Canvas (R3F context boundary). Exported processDownstreamMessage for pure-function testing. 7 unit tests for message processing. All 45 tests passing, zero TypeScript errors.
+
 ---
 
 ## Decisions
