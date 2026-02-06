@@ -61,8 +61,8 @@ export default function GlobeScene() {
         gl={{ antialias: true }}
         style={{ background: "#000000" }}
       >
-        <ambientLight intensity={0.15} />
-        <directionalLight position={[5, 3, 5]} intensity={1.2} />
+        <ambientLight intensity={0.6} />
+        <directionalLight position={[5, 3, 5]} intensity={1.8} />
         <Globe />
         <Atmosphere />
         <Vessels vessels={filteredVessels} />
@@ -87,13 +87,13 @@ export default function GlobeScene() {
         </EffectComposer>
         <ReadySignal />
       </Canvas>
-      {status !== "connected" && (
-        <div className="absolute bottom-4 left-4 z-10 font-[family-name:var(--font-mono)] text-[10px] text-[var(--text-secondary)]">
-          {status === "connecting"
+      <div className="absolute bottom-4 left-4 z-10 font-[family-name:var(--font-mono)] text-[10px] text-[var(--text-secondary)]">
+        {status === "connected"
+          ? `LIVE — ${filteredVessels.length} vessels`
+          : status === "connecting"
             ? "Connecting to AIS stream..."
             : "Using demo data"}
-        </div>
-      )}
+      </div>
     </div>
   );
 }

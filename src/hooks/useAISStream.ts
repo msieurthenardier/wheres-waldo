@@ -220,6 +220,8 @@ export function useAISStream(): {
       ws.onopen = () => {
         if (!mountedRef.current) return;
 
+        console.log("[AIS] WebSocket connected, sending subscription...");
+
         // Send subscription
         const subscription: AISStreamSubscription = {
           APIKey: AISSTREAM_API_KEY,
@@ -246,6 +248,7 @@ export function useAISStream(): {
         try {
           envelope = JSON.parse(event.data as string) as AISStreamEnvelope;
         } catch {
+          console.warn("[AIS] Failed to parse message:", (event.data as string).slice(0, 200));
           return;
         }
 
@@ -255,8 +258,9 @@ export function useAISStream(): {
         }
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         if (!mountedRef.current) return;
+        console.log(`[AIS] WebSocket closed: code=${event.code} reason="${event.reason}"`);
         setStatus("disconnected");
 
         // Keep whatever data we have — don't reset to fallback
@@ -268,7 +272,8 @@ export function useAISStream(): {
         scheduleReconnect(connect);
       };
 
-      ws.onerror = () => {
+      ws.onerror = (event) => {
+        console.error("[AIS] WebSocket error:", event);
         // close event fires after error — reconnection handled there
       };
     };
