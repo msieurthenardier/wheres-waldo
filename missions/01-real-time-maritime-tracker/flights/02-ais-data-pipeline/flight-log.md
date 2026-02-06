@@ -22,6 +22,12 @@ Flight 02 establishes the real-time AIS data pipeline connecting AISStream.io's 
 - **Completed**: 2026-02-06
 - **Summary**: Created standalone mock AIS WebSocket server implementing AISStream.io protocol. Generates synthetic vessels moving along great-circle paths between TEST_PORTS with configurable message rate, vessel count, and time scale. Exports startMockServer() for programmatic control. Added ws to dependencies, @types/ws to devDependencies, dev:mock script. 3 smoke tests verifying subscription handling, concurrent clients, and valid coordinate ranges. All 35 tests passing.
 
+### Leg 02: WebSocket Relay Server
+- **Status**: completed
+- **Started**: 2026-02-06
+- **Completed**: 2026-02-06
+- **Summary**: Created custom Next.js server entry point (src/server/index.ts) with WebSocket upgrade handling on /ws/ais. UpstreamManager (src/server/upstream.ts) connects to AIS_UPSTREAM_URL with exponential backoff reconnection (1s-30s), sends AISStreamSubscription with bounding boxes, parses messages into shared VesselStore, and runs periodic stale vessel eviction. DownstreamManager (src/server/downstream.ts) manages browser WebSocket connections using noServer mode, sends full VesselPosition snapshot on connect, broadcasts delta position/static updates. Added dev:server script with tsx --watch. 3 integration tests verifying full pipeline (mock→relay→client), snapshot delivery, and path rejection. All 38 tests passing, zero TypeScript errors.
+
 ---
 
 ## Decisions

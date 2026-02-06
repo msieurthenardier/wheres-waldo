@@ -9,7 +9,8 @@
     "lint": "next lint",
     "test:screenshots": "playwright test",
     "test": "vitest run",
-    "dev:mock": "tsx src/server/mock-ais.ts"
+    "dev:mock": "tsx src/server/mock-ais.ts",
+    "dev:server": "tsx --watch src/server/index.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10",
