@@ -3,13 +3,15 @@
 import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import Globe from "@/components/globe/Globe";
 import Atmosphere from "@/components/globe/Atmosphere";
 import Vessels from "@/components/globe/Vessels";
 import PortMarkers from "@/components/globe/PortMarkers";
 import ShippingLanes from "@/components/globe/ShippingLanes";
-import { useAISStream } from "@/hooks/useAISStream";
+import { useAISData } from "@/stores/ais";
+import { useFilters } from "@/stores/filters";
+import type { CommodityId } from "@/lib/commodity";
 
 function ReadySignal() {
   const gl = useThree((state) => state.gl);
@@ -23,7 +25,34 @@ function ReadySignal() {
 }
 
 export default function GlobeScene() {
-  const { vessels } = useAISStream();
+  const { vessels, status } = useAISData();
+  const { activeCommodities, searchQuery } = useFilters();
+
+  const filteredVessels = useMemo(() => {
+    let filtered = vessels;
+
+    // Filter by active commodities
+    if (activeCommodities.size < 6) {
+      filtered = filtered.filter(
+        (v) =>
+          !v.commodity ||
+          activeCommodities.has(v.commodity as CommodityId)
+      );
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      filtered = filtered.filter(
+        (v) =>
+          v.shipName.toLowerCase().includes(q) ||
+          v.mmsi.includes(q) ||
+          (v.commodity && v.commodity.toLowerCase().includes(q))
+      );
+    }
+
+    return filtered;
+  }, [vessels, activeCommodities, searchQuery]);
 
   return (
     <div className="h-full w-full">
@@ -36,9 +65,9 @@ export default function GlobeScene() {
         <directionalLight position={[5, 3, 5]} intensity={1.2} />
         <Globe />
         <Atmosphere />
-        <Vessels vessels={vessels} />
+        <Vessels vessels={filteredVessels} />
         <PortMarkers />
-        <ShippingLanes />
+        <ShippingLanes activeCommodities={activeCommodities} />
         <OrbitControls
           enablePan={false}
           minDistance={1.2}
@@ -58,6 +87,13 @@ export default function GlobeScene() {
         </EffectComposer>
         <ReadySignal />
       </Canvas>
+      {status !== "connected" && (
+        <div className="absolute bottom-4 left-4 z-10 font-[family-name:var(--font-mono)] text-[10px] text-[var(--text-secondary)]">
+          {status === "connecting"
+            ? "Connecting to AIS stream..."
+            : "Using demo data"}
+        </div>
+      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { Line } from "@react-three/drei";
 import { useMemo } from "react";
 import { greatCirclePoints } from "@/lib/geo";
 import { getTradeRoutes } from "@/lib/commodity";
+import type { CommodityId } from "@/lib/commodity";
 
 function LaneArc({
   fromLat,
@@ -34,8 +35,19 @@ function LaneArc({
   );
 }
 
-export default function ShippingLanes() {
-  const routes = useMemo(() => getTradeRoutes(), []);
+interface ShippingLanesProps {
+  activeCommodities: Set<CommodityId>;
+}
+
+export default function ShippingLanes({ activeCommodities }: ShippingLanesProps) {
+  const allRoutes = useMemo(() => getTradeRoutes(), []);
+
+  const routes = useMemo(() => {
+    if (activeCommodities.size >= 6) return allRoutes;
+    return allRoutes.filter((r) =>
+      activeCommodities.has(r.commodity as CommodityId)
+    );
+  }, [allRoutes, activeCommodities]);
 
   return (
     <group>

@@ -2,6 +2,8 @@
 
 import dynamic from "next/dynamic";
 import Layout from "@/components/ui/Layout";
+import { FilterProvider } from "@/stores/filters";
+import { AISProvider } from "@/stores/ais";
 
 const GlobeScene = dynamic(() => import("@/components/scene/GlobeScene"), {
   ssr: false,
@@ -16,8 +18,12 @@ const GlobeScene = dynamic(() => import("@/components/scene/GlobeScene"), {
 
 export default function Home() {
   return (
-    <Layout>
-      <GlobeScene />
-    </Layout>
+    <FilterProvider>
+      <AISProvider>
+        <Layout>
+          <GlobeScene />
+        </Layout>
+      </AISProvider>
+    </FilterProvider>
   );
 }
