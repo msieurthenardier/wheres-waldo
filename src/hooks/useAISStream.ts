@@ -14,13 +14,20 @@ import { TEST_VESSELS } from "@/data/test-markers";
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 
-const AISSTREAM_URL = "wss://stream.aisstream.io/v0/stream";
+// In development, connect through the local relay (scripts/ais-relay.mjs)
+// which strips the Origin header that AISStream.io rejects from browsers.
+// In production (GitHub Pages), there's no relay — use static snapshot data.
+const AIS_RELAY_URL =
+  process.env.NEXT_PUBLIC_AIS_RELAY_URL || "ws://localhost:4001";
 const AISSTREAM_API_KEY =
   process.env.NEXT_PUBLIC_AISSTREAM_API_KEY || "7f7b4857052f93ddaac1d413ae4b82b23ee0a3e8";
 
 const INITIAL_BACKOFF_MS = 1_000;
 const MAX_BACKOFF_MS = 30_000;
 const BACKOFF_MULTIPLIER = 2;
+
+/** Give up connecting after this many consecutive failures */
+const MAX_RETRIES = 3;
 
 /** How often to flush vessel state to React (ms) */
 const FLUSH_INTERVAL_MS = 2_000;
@@ -152,6 +159,7 @@ export function useAISStream(): {
   const storeRef = useRef(new VesselStore({ ttlMs: 900_000 }));
   const mountedRef = useRef(true);
   const backoffRef = useRef(INITIAL_BACKOFF_MS);
+  const retriesRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flushTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const dirtyRef = useRef(false);
@@ -211,24 +219,33 @@ export function useAISStream(): {
     const connect = () => {
       if (!mountedRef.current) return;
 
+      // Stop retrying after MAX_RETRIES failures
+      if (retriesRef.current >= MAX_RETRIES) {
+        console.log("[AIS] Max retries reached, using demo data. Run: node scripts/ais-relay.mjs");
+        setStatus("disconnected");
+        return;
+      }
+
       cleanup();
       setStatus("connecting");
+      retriesRef.current++;
 
-      const ws = new WebSocket(AISSTREAM_URL);
+      const ws = new WebSocket(AIS_RELAY_URL);
       wsRef.current = ws;
 
       ws.onopen = () => {
         if (!mountedRef.current) return;
 
-        console.log("[AIS] WebSocket connected, sending subscription...");
+        console.log("[AIS] Connected to relay, sending subscription...");
 
-        // Send subscription
+        // Send subscription (relayed transparently to AISStream.io)
+        // Note: AISStream.io sends StandardClassBCSPositionReport messages
+        // automatically — do NOT include it in FilterMessageTypes (unsupported).
         const subscription: AISStreamSubscription = {
           APIKey: AISSTREAM_API_KEY,
           BoundingBoxes: GLOBAL_BBOXES,
           FilterMessageTypes: [
             "PositionReport",
-            "StandardClassBCSPositionReport",
             "ShipStaticData",
           ],
         };
@@ -236,6 +253,7 @@ export function useAISStream(): {
 
         setStatus("connected");
         backoffRef.current = INITIAL_BACKOFF_MS;
+        retriesRef.current = 0;
 
         // Start periodic flush
         flushTimerRef.current = setInterval(flush, FLUSH_INTERVAL_MS);
