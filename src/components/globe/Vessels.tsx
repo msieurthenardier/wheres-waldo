@@ -8,7 +8,7 @@ import type { EnrichedVesselPosition } from "@/lib/ais";
 import { COMMODITIES } from "@/lib/commodity";
 
 const DEFAULT_COLOR = new THREE.Color("#00fff2");
-const MAX_VISIBLE_VESSELS = 5000;
+const MAX_VISIBLE_VESSELS = 12000;
 
 function getCommodityColor(commodity: string | null): THREE.Color {
   if (!commodity) return DEFAULT_COLOR;
@@ -44,14 +44,9 @@ function VesselInstances({ vessels }: VesselsProps) {
   );
   const count = visibleVessels.length;
 
-  // Create per-instance color material (override GLTF materials)
+  // Unlit material — at this scale, lighting washes out the colors
   const material = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        vertexColors: true,
-        emissive: new THREE.Color("#ffffff"),
-        emissiveIntensity: 0.3,
-      }),
+    () => new THREE.MeshBasicMaterial({ vertexColors: true }),
     []
   );
 
@@ -72,13 +67,17 @@ function VesselInstances({ vessels }: VesselsProps) {
     const dummy = new THREE.Object3D();
     const up = new THREE.Vector3();
     const forward = new THREE.Vector3();
+    const right = new THREE.Vector3();
+    const rotMatrix = new THREE.Matrix4();
 
     visibleVessels.forEach((vessel, i) => {
       const pos = latLonToVector3(vessel.lat, vessel.lon, 1.01);
       dummy.position.copy(pos);
 
+      // Surface normal = radial outward
       up.copy(pos).normalize();
 
+      // Compute heading tangent on the globe surface
       const headingDeg = !isNaN(vessel.heading)
         ? vessel.heading
         : !isNaN(vessel.cog)
@@ -86,22 +85,22 @@ function VesselInstances({ vessels }: VesselsProps) {
           : 0;
       const headingRad = (headingDeg * Math.PI) / 180;
 
+      // Start with an arbitrary tangent, then rotate by heading
       forward.set(0, 1, 0);
       if (Math.abs(up.dot(forward)) > 0.99) {
         forward.set(1, 0, 0);
       }
-      forward.cross(up).normalize();
+      // Project onto tangent plane and rotate by heading
+      right.crossVectors(forward, up).normalize();
+      forward.crossVectors(up, right).normalize();
       forward.applyAxisAngle(up, headingRad);
+      right.crossVectors(forward, up).normalize();
 
-      const lookTarget = dummy.position.clone().add(forward);
-      dummy.lookAt(lookTarget);
-      dummy.rotateX(Math.PI / 2);
+      // Build orientation: X=right, Y=up (surface normal), Z=forward (bow)
+      rotMatrix.makeBasis(right, up, forward);
+      dummy.setRotationFromMatrix(rotMatrix);
 
-      const valueScale =
-        vessel.estimatedValueUsd > 0
-          ? Math.min(2.0, 0.8 + Math.log10(vessel.estimatedValueUsd) / 10)
-          : 1.0;
-      const base = 0.0003 * valueScale;
+      const base = 0.00012;
       dummy.scale.set(base, base, base);
       dummy.updateMatrix();
 
