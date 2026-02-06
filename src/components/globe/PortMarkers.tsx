@@ -1,11 +1,14 @@
 "use client";
 
-import { useRef, useEffect, useMemo } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useRef, useEffect, useMemo, useCallback } from "react";
+import { useFrame, ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { latLonToVector3 } from "@/lib/geo";
 import { COMMODITY_PORTS, COMMODITIES } from "@/lib/commodity";
 import type { CommodityPort } from "@/lib/commodity";
+import { useFilters } from "@/stores/filters";
+
+const HIGHLIGHT_COLOR = new THREE.Color("#ffffff");
 
 function getPortColor(port: CommodityPort): THREE.Color {
   // Use the color of the port's primary commodity (first export, or first import)
@@ -20,6 +23,7 @@ function getPortColor(port: CommodityPort): THREE.Color {
 export default function PortMarkers() {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const materialRef = useRef<THREE.MeshStandardMaterial>(null);
+  const { selectItem, selectedId, selectedType } = useFilters();
   const count = COMMODITY_PORTS.length;
 
   // Pulse animation
@@ -30,16 +34,21 @@ export default function PortMarkers() {
     }
   });
 
+  // Build color array, highlighting selected port
   const colorArray = useMemo(() => {
     const arr = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
-      const color = getPortColor(COMMODITY_PORTS[i]);
+      const isSelected =
+        selectedType === "port" && selectedId === COMMODITY_PORTS[i].name;
+      const color = isSelected
+        ? HIGHLIGHT_COLOR
+        : getPortColor(COMMODITY_PORTS[i]);
       arr[i * 3] = color.r;
       arr[i * 3 + 1] = color.g;
       arr[i * 3 + 2] = color.b;
     }
     return arr;
-  }, [count]);
+  }, [count, selectedId, selectedType]);
 
   useEffect(() => {
     if (!meshRef.current) return;
@@ -59,8 +68,34 @@ export default function PortMarkers() {
     meshRef.current.instanceMatrix.needsUpdate = true;
   }, []);
 
+  const handleClick = useCallback(
+    (e: ThreeEvent<MouseEvent>) => {
+      if (e.instanceId === undefined) return;
+      e.stopPropagation();
+      const port = COMMODITY_PORTS[e.instanceId];
+      if (port) {
+        selectItem(port.name, "port");
+      }
+    },
+    [selectItem]
+  );
+
+  const handlePointerOver = useCallback(() => {
+    document.body.style.cursor = "pointer";
+  }, []);
+
+  const handlePointerOut = useCallback(() => {
+    document.body.style.cursor = "auto";
+  }, []);
+
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, count]}>
+    <instancedMesh
+      ref={meshRef}
+      args={[undefined, undefined, count]}
+      onClick={handleClick}
+      onPointerOver={handlePointerOver}
+      onPointerOut={handlePointerOut}
+    >
       <sphereGeometry args={[1, 16, 16]} />
       <meshStandardMaterial
         ref={materialRef}

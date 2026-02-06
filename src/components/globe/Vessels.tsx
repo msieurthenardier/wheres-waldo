@@ -1,14 +1,20 @@
 "use client";
 
-import { useRef, useEffect, useMemo, Suspense } from "react";
+import { useRef, useEffect, useMemo, useCallback, Suspense } from "react";
 import * as THREE from "three";
 import { useGLTF } from "@react-three/drei";
+import { ThreeEvent } from "@react-three/fiber";
 import { latLonToVector3 } from "@/lib/geo";
 import type { EnrichedVesselPosition } from "@/lib/ais";
 import { COMMODITIES } from "@/lib/commodity";
+import { useFilters } from "@/stores/filters";
 
 const DEFAULT_COLOR = new THREE.Color("#00fff2");
+const HIGHLIGHT_COLOR = new THREE.Color("#ffffff");
 const MAX_VISIBLE_VESSELS = 12000;
+
+/** Radius of invisible picking spheres (much larger than ship models) */
+const PICK_RADIUS = 0.012;
 
 function getCommodityColor(commodity: string | null): THREE.Color {
   if (!commodity) return DEFAULT_COLOR;
@@ -23,12 +29,14 @@ interface VesselsProps {
 
 function VesselInstances({ vessels }: VesselsProps) {
   const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
-  const { nodes, materials } = useGLTF(
+  const { nodes } = useGLTF(
     `${basePath}/models/cargo-ship-transformed.glb`
   );
+  const { selectItem, selectedId, selectedType } = useFilters();
 
   const meshRefA = useRef<THREE.InstancedMesh>(null);
   const meshRefB = useRef<THREE.InstancedMesh>(null);
+  const pickRef = useRef<THREE.InstancedMesh>(null);
 
   // Extract geometry from GLTF nodes
   const geometryA = (nodes.node_id6 as THREE.Mesh)?.geometry;
@@ -50,16 +58,27 @@ function VesselInstances({ vessels }: VesselsProps) {
     []
   );
 
+  // Invisible material for picking spheres
+  const pickMaterial = useMemo(
+    () => new THREE.MeshBasicMaterial({ visible: false }),
+    []
+  );
+
+  // Build color array, highlighting selected vessel
   const colorArray = useMemo(() => {
     const arr = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
-      const color = getCommodityColor(visibleVessels[i].commodity);
+      const isSelected =
+        selectedType === "vessel" && selectedId === visibleVessels[i].mmsi;
+      const color = isSelected
+        ? HIGHLIGHT_COLOR
+        : getCommodityColor(visibleVessels[i].commodity);
       arr[i * 3] = color.r;
       arr[i * 3 + 1] = color.g;
       arr[i * 3 + 2] = color.b;
     }
     return arr;
-  }, [visibleVessels, count]);
+  }, [visibleVessels, count, selectedId, selectedType]);
 
   useEffect(() => {
     if (!meshRefA.current) return;
@@ -108,18 +127,49 @@ function VesselInstances({ vessels }: VesselsProps) {
       if (meshRefB.current) {
         meshRefB.current.setMatrixAt(i, dummy.matrix);
       }
+
+      // Picking sphere — same position, uniform scale
+      if (pickRef.current) {
+        dummy.scale.set(PICK_RADIUS, PICK_RADIUS, PICK_RADIUS);
+        dummy.updateMatrix();
+        pickRef.current.setMatrixAt(i, dummy.matrix);
+      }
     });
 
     meshRefA.current.instanceMatrix.needsUpdate = true;
     if (meshRefB.current) {
       meshRefB.current.instanceMatrix.needsUpdate = true;
     }
+    if (pickRef.current) {
+      pickRef.current.instanceMatrix.needsUpdate = true;
+    }
   }, [visibleVessels]);
+
+  const handleClick = useCallback(
+    (e: ThreeEvent<MouseEvent>) => {
+      if (e.instanceId === undefined) return;
+      e.stopPropagation();
+      const vessel = visibleVessels[e.instanceId];
+      if (vessel) {
+        selectItem(vessel.mmsi, "vessel");
+      }
+    },
+    [visibleVessels, selectItem]
+  );
+
+  const handlePointerOver = useCallback(() => {
+    document.body.style.cursor = "pointer";
+  }, []);
+
+  const handlePointerOut = useCallback(() => {
+    document.body.style.cursor = "auto";
+  }, []);
 
   if (count === 0 || !geometryA) return null;
 
   return (
     <>
+      {/* Visible ship models */}
       <instancedMesh
         key={`a-${count}`}
         ref={meshRefA}
@@ -144,6 +194,18 @@ function VesselInstances({ vessels }: VesselsProps) {
           />
         </instancedMesh>
       )}
+      {/* Invisible picking spheres — larger hit area for clicking */}
+      <instancedMesh
+        key={`pick-${count}`}
+        ref={pickRef}
+        args={[undefined, pickMaterial, count]}
+        frustumCulled={false}
+        onClick={handleClick}
+        onPointerOver={handlePointerOver}
+        onPointerOut={handlePointerOut}
+      >
+        <sphereGeometry args={[1, 8, 8]} />
+      </instancedMesh>
     </>
   );
 }

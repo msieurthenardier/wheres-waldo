@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAISData } from "@/stores/ais";
 import { useFilters } from "@/stores/filters";
 import { COMMODITIES, COMMODITY_IDS, COMMODITY_PORTS } from "@/lib/commodity";
@@ -17,6 +17,11 @@ export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const { stats } = useAISData();
   const { selectedId, selectedType, selectItem } = useFilters();
+
+  // Auto-open sidebar when something is selected
+  useEffect(() => {
+    if (selectedId) setIsOpen(true);
+  }, [selectedId]);
 
   return (
     <>
