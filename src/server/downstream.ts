@@ -1,7 +1,7 @@
 import { WebSocketServer, WebSocket } from "ws";
 import type { IncomingMessage } from "http";
 import type { Duplex } from "stream";
-import type { VesselPosition, VesselStatic } from "@/lib/ais";
+import type { VesselPosition, VesselStatic, EnrichedVesselPosition } from "@/lib/ais";
 import { VesselStore } from "@/lib/ais";
 
 // ─── DownstreamManager ──────────────────────────────────────────────────────
@@ -26,9 +26,10 @@ export class DownstreamManager {
   }
 
   broadcastPosition(position: VesselPosition): void {
+    const enriched = this.enrichPosition(position);
     const message = JSON.stringify({
       type: "position",
-      data: position,
+      data: enriched,
     });
     for (const client of this.wss.clients) {
       if (client.readyState === WebSocket.OPEN) {
@@ -62,12 +63,22 @@ export class DownstreamManager {
     });
   }
 
+  private enrichPosition(position: VesselPosition): EnrichedVesselPosition {
+    const record = this.store.get(position.mmsi);
+    const enrichment = record?.enrichment;
+    return {
+      ...position,
+      commodity: enrichment?.commodity ?? null,
+      estimatedValueUsd: enrichment?.estimatedValueUsd ?? 0,
+    };
+  }
+
   private sendSnapshot(ws: WebSocket): void {
     const vessels = this.store.getAll();
-    const positions: VesselPosition[] = [];
+    const positions: EnrichedVesselPosition[] = [];
     for (const [, record] of vessels) {
       if (record.position) {
-        positions.push(record.position);
+        positions.push(this.enrichPosition(record.position));
       }
     }
     ws.send(

@@ -125,9 +125,24 @@ export interface VesselStatic {
   timestamp: number; // Unix epoch ms when received
 }
 
+/** Enrichment data attached to a vessel by the commodity classifier */
+export interface VesselEnrichmentData {
+  commodity: string | null;
+  confidence: number;
+  estimatedValueUsd: number;
+  dwtEstimate: number;
+}
+
 /** Combined vessel record stored in VesselStore */
 export interface VesselRecord {
   position: VesselPosition | null;
   static: VesselStatic | null;
+  enrichment: VesselEnrichmentData | null;
   lastUpdate: number; // Unix epoch ms of most recent update (position or static)
+}
+
+/** Position data with optional enrichment for downstream transmission */
+export interface EnrichedVesselPosition extends VesselPosition {
+  commodity: string | null;
+  estimatedValueUsd: number;
 }

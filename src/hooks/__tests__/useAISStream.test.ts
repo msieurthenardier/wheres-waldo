@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { processDownstreamMessage } from "../useAISStream";
-import type { VesselPosition } from "@/lib/ais";
+import type { EnrichedVesselPosition } from "@/lib/ais";
 
-function makePosition(overrides: Partial<VesselPosition> = {}): VesselPosition {
+function makePosition(overrides: Partial<EnrichedVesselPosition> = {}): EnrichedVesselPosition {
   return {
     mmsi: "200000001",
     lat: 35.0,
@@ -13,13 +13,15 @@ function makePosition(overrides: Partial<VesselPosition> = {}): VesselPosition {
     navStatus: 0,
     timestamp: Date.now(),
     shipName: "TEST VESSEL",
+    commodity: null,
+    estimatedValueUsd: 0,
     ...overrides,
   };
 }
 
 describe("processDownstreamMessage", () => {
   it("replaces vessel map on snapshot", () => {
-    const existing = new Map<string, VesselPosition>();
+    const existing = new Map<string, EnrichedVesselPosition>();
     existing.set("old", makePosition({ mmsi: "old" }));
 
     const v1 = makePosition({ mmsi: "111" });
@@ -38,7 +40,7 @@ describe("processDownstreamMessage", () => {
   });
 
   it("handles empty snapshot", () => {
-    const existing = new Map<string, VesselPosition>();
+    const existing = new Map<string, EnrichedVesselPosition>();
     existing.set("old", makePosition({ mmsi: "old" }));
 
     const result = processDownstreamMessage(existing, {
@@ -51,7 +53,7 @@ describe("processDownstreamMessage", () => {
   });
 
   it("upserts vessel on position update", () => {
-    const existing = new Map<string, VesselPosition>();
+    const existing = new Map<string, EnrichedVesselPosition>();
     existing.set("111", makePosition({ mmsi: "111", lat: 30 }));
 
     const updated = makePosition({ mmsi: "111", lat: 31 });
@@ -65,7 +67,7 @@ describe("processDownstreamMessage", () => {
   });
 
   it("adds new vessel on position update", () => {
-    const existing = new Map<string, VesselPosition>();
+    const existing = new Map<string, EnrichedVesselPosition>();
     existing.set("111", makePosition({ mmsi: "111" }));
 
     const newVessel = makePosition({ mmsi: "222", lat: 40 });
@@ -80,7 +82,7 @@ describe("processDownstreamMessage", () => {
   });
 
   it("does not modify original map on position update", () => {
-    const existing = new Map<string, VesselPosition>();
+    const existing = new Map<string, EnrichedVesselPosition>();
     existing.set("111", makePosition({ mmsi: "111" }));
 
     processDownstreamMessage(existing, {
@@ -93,7 +95,7 @@ describe("processDownstreamMessage", () => {
   });
 
   it("returns null for static messages", () => {
-    const existing = new Map<string, VesselPosition>();
+    const existing = new Map<string, EnrichedVesselPosition>();
     const result = processDownstreamMessage(existing, {
       type: "static",
       data: { mmsi: "111", name: "TEST" },
@@ -103,7 +105,7 @@ describe("processDownstreamMessage", () => {
   });
 
   it("returns null for unknown message types", () => {
-    const existing = new Map<string, VesselPosition>();
+    const existing = new Map<string, EnrichedVesselPosition>();
     const result = processDownstreamMessage(existing, {
       type: "unknown" as "snapshot",
       data: {},

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import type { VesselPosition } from "@/lib/ais";
+import type { VesselPosition, EnrichedVesselPosition } from "@/lib/ais";
 import { TEST_VESSELS } from "@/data/test-markers";
 
 // ─── Configuration ──────────────────────────────────────────────────────────
@@ -12,7 +12,7 @@ const BACKOFF_MULTIPLIER = 2;
 
 // ─── Fallback Data ──────────────────────────────────────────────────────────
 
-const FALLBACK_VESSELS: VesselPosition[] = TEST_VESSELS.map((v) => ({
+const FALLBACK_VESSELS: EnrichedVesselPosition[] = TEST_VESSELS.map((v) => ({
   mmsi: v.id,
   lat: v.lat,
   lon: v.lon,
@@ -22,6 +22,8 @@ const FALLBACK_VESSELS: VesselPosition[] = TEST_VESSELS.map((v) => ({
   navStatus: 0,
   timestamp: Date.now(),
   shipName: `Test ${v.id}`,
+  commodity: v.type === "container" ? "semiconductors" : v.type === "bulk" ? "copper" : "lithium",
+  estimatedValueUsd: 0,
 }));
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -36,20 +38,20 @@ interface DownstreamMessage {
 // ─── Pure Message Processor (exported for testing) ──────────────────────────
 
 export function processDownstreamMessage(
-  vesselMap: Map<string, VesselPosition>,
+  vesselMap: Map<string, EnrichedVesselPosition>,
   msg: DownstreamMessage
-): Map<string, VesselPosition> | null {
+): Map<string, EnrichedVesselPosition> | null {
   switch (msg.type) {
     case "snapshot": {
-      const positions = msg.data as VesselPosition[];
-      const map = new Map<string, VesselPosition>();
+      const positions = msg.data as EnrichedVesselPosition[];
+      const map = new Map<string, EnrichedVesselPosition>();
       for (const pos of positions) {
         map.set(pos.mmsi, pos);
       }
       return map;
     }
     case "position": {
-      const pos = msg.data as VesselPosition;
+      const pos = msg.data as EnrichedVesselPosition;
       const newMap = new Map(vesselMap);
       newMap.set(pos.mmsi, pos);
       return newMap;
@@ -64,14 +66,14 @@ export function processDownstreamMessage(
 // ─── Hook ───────────────────────────────────────────────────────────────────
 
 export function useAISStream(): {
-  vessels: VesselPosition[];
+  vessels: EnrichedVesselPosition[];
   status: ConnectionStatus;
 } {
-  const [vessels, setVessels] = useState<VesselPosition[]>(FALLBACK_VESSELS);
+  const [vessels, setVessels] = useState<EnrichedVesselPosition[]>(FALLBACK_VESSELS);
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
 
   const wsRef = useRef<WebSocket | null>(null);
-  const vesselMapRef = useRef<Map<string, VesselPosition>>(
+  const vesselMapRef = useRef<Map<string, EnrichedVesselPosition>>(
     new Map(FALLBACK_VESSELS.map((v) => [v.mmsi, v]))
   );
   const mountedRef = useRef(true);

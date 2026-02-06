@@ -2,6 +2,7 @@ import { createServer } from "http";
 import next from "next";
 import { parse } from "url";
 import { VesselStore } from "@/lib/ais";
+import { enrichVessel } from "@/lib/commodity";
 import { UpstreamManager } from "./upstream";
 import { DownstreamManager } from "./downstream";
 
@@ -40,7 +41,20 @@ async function main() {
     apiKey,
     events: {
       onPositionUpdate: (position) => downstream.broadcastPosition(position),
-      onStaticUpdate: (staticData) => downstream.broadcastStatic(staticData),
+      onStaticUpdate: (staticData) => {
+        // Enrich vessel with commodity classification on static data receipt
+        const record = store.get(staticData.mmsi);
+        if (record) {
+          const enrichment = enrichVessel(staticData, record.position);
+          record.enrichment = {
+            commodity: enrichment.commodity,
+            confidence: enrichment.confidence,
+            estimatedValueUsd: enrichment.estimatedValueUsd,
+            dwtEstimate: enrichment.dwtEstimate,
+          };
+        }
+        downstream.broadcastStatic(staticData);
+      },
     },
   });
 

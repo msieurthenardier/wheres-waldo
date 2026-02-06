@@ -4,12 +4,23 @@ import { useRef, useEffect, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { latLonToVector3 } from "@/lib/geo";
-import { TEST_PORTS } from "@/data/test-markers";
+import { COMMODITY_PORTS, COMMODITIES } from "@/lib/commodity";
+import type { CommodityPort } from "@/lib/commodity";
+
+function getPortColor(port: CommodityPort): THREE.Color {
+  // Use the color of the port's primary commodity (first export, or first import)
+  const primaryCommodity = port.exports[0] ?? port.imports[0];
+  if (primaryCommodity) {
+    const info = COMMODITIES[primaryCommodity as keyof typeof COMMODITIES];
+    if (info) return new THREE.Color(info.color);
+  }
+  return new THREE.Color("#00fff2");
+}
 
 export default function PortMarkers() {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const materialRef = useRef<THREE.MeshStandardMaterial>(null);
-  const count = TEST_PORTS.length;
+  const count = COMMODITY_PORTS.length;
 
   // Pulse animation
   useFrame(({ clock }) => {
@@ -21,8 +32,8 @@ export default function PortMarkers() {
 
   const colorArray = useMemo(() => {
     const arr = new Float32Array(count * 3);
-    const color = new THREE.Color("#00fff2");
     for (let i = 0; i < count; i++) {
+      const color = getPortColor(COMMODITY_PORTS[i]);
       arr[i * 3] = color.r;
       arr[i * 3 + 1] = color.g;
       arr[i * 3 + 2] = color.b;
@@ -35,11 +46,11 @@ export default function PortMarkers() {
 
     const dummy = new THREE.Object3D();
 
-    TEST_PORTS.forEach((port, i) => {
+    COMMODITY_PORTS.forEach((port, i) => {
       const pos = latLonToVector3(port.lat, port.lon, 1.005);
       dummy.position.copy(pos);
-      // Scale based on port value
-      const scale = 0.008 + port.value * 0.012;
+      // Scale based on port throughput
+      const scale = 0.008 + port.throughput * 0.012;
       dummy.scale.set(scale, scale, scale);
       dummy.updateMatrix();
       meshRef.current!.setMatrixAt(i, dummy.matrix);
@@ -53,8 +64,8 @@ export default function PortMarkers() {
       <sphereGeometry args={[1, 16, 16]} />
       <meshStandardMaterial
         ref={materialRef}
-        color="#00fff2"
-        emissive="#00fff2"
+        vertexColors
+        emissive="#ffffff"
         emissiveIntensity={1.2}
         toneMapped={false}
       />
