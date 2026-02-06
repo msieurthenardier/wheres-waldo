@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useEffect, useMemo } from "react";
+import { useRef, useEffect, useMemo, Suspense } from "react";
 import * as THREE from "three";
+import { useGLTF } from "@react-three/drei";
 import { latLonToVector3 } from "@/lib/geo";
 import type { EnrichedVesselPosition } from "@/lib/ais";
 import { COMMODITIES } from "@/lib/commodity";
@@ -20,15 +21,39 @@ interface VesselsProps {
   vessels: EnrichedVesselPosition[];
 }
 
-export default function Vessels({ vessels }: VesselsProps) {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
+function VesselInstances({ vessels }: VesselsProps) {
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+  const { nodes, materials } = useGLTF(
+    `${basePath}/models/cargo-ship-transformed.glb`
+  );
+
+  const meshRefA = useRef<THREE.InstancedMesh>(null);
+  const meshRefB = useRef<THREE.InstancedMesh>(null);
+
+  // Extract geometry from GLTF nodes
+  const geometryA = (nodes.node_id6 as THREE.Mesh)?.geometry;
+  const geometryB = (nodes.node_id9 as THREE.Mesh)?.geometry;
 
   // Cap vessel count for performance
   const visibleVessels = useMemo(
-    () => (vessels.length > MAX_VISIBLE_VESSELS ? vessels.slice(0, MAX_VISIBLE_VESSELS) : vessels),
+    () =>
+      vessels.length > MAX_VISIBLE_VESSELS
+        ? vessels.slice(0, MAX_VISIBLE_VESSELS)
+        : vessels,
     [vessels]
   );
   const count = visibleVessels.length;
+
+  // Create per-instance color material (override GLTF materials)
+  const material = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        vertexColors: true,
+        emissive: new THREE.Color("#ffffff"),
+        emissiveIntensity: 0.3,
+      }),
+    []
+  );
 
   const colorArray = useMemo(() => {
     const arr = new Float32Array(count * 3);
@@ -42,7 +67,7 @@ export default function Vessels({ vessels }: VesselsProps) {
   }, [visibleVessels, count]);
 
   useEffect(() => {
-    if (!meshRef.current) return;
+    if (!meshRefA.current) return;
 
     const dummy = new THREE.Object3D();
     const up = new THREE.Vector3();
@@ -76,35 +101,58 @@ export default function Vessels({ vessels }: VesselsProps) {
         vessel.estimatedValueUsd > 0
           ? Math.min(2.0, 0.8 + Math.log10(vessel.estimatedValueUsd) / 10)
           : 1.0;
-      const base = 0.012 * valueScale;
-      const height = 0.025 * valueScale;
-      dummy.scale.set(base, height, base);
+      const base = 0.003 * valueScale;
+      dummy.scale.set(base, base, base);
       dummy.updateMatrix();
-      meshRef.current!.setMatrixAt(i, dummy.matrix);
+
+      meshRefA.current!.setMatrixAt(i, dummy.matrix);
+      if (meshRefB.current) {
+        meshRefB.current.setMatrixAt(i, dummy.matrix);
+      }
     });
 
-    meshRef.current.instanceMatrix.needsUpdate = true;
+    meshRefA.current.instanceMatrix.needsUpdate = true;
+    if (meshRefB.current) {
+      meshRefB.current.instanceMatrix.needsUpdate = true;
+    }
   }, [visibleVessels]);
 
-  if (count === 0) return null;
+  if (count === 0 || !geometryA) return null;
 
   return (
-    <instancedMesh
-      key={count}
-      ref={meshRef}
-      args={[undefined, undefined, count]}
-      frustumCulled={false}
-    >
-      <coneGeometry args={[1, 2, 6]} />
-      <meshStandardMaterial
-        vertexColors
-        emissive="#ffffff"
-        emissiveIntensity={0.3}
-      />
-      <instancedBufferAttribute
-        attach="geometry-attributes-color"
-        args={[colorArray, 3]}
-      />
-    </instancedMesh>
+    <>
+      <instancedMesh
+        key={`a-${count}`}
+        ref={meshRefA}
+        args={[geometryA, material, count]}
+        frustumCulled={false}
+      >
+        <instancedBufferAttribute
+          attach="geometry-attributes-color"
+          args={[colorArray, 3]}
+        />
+      </instancedMesh>
+      {geometryB && (
+        <instancedMesh
+          key={`b-${count}`}
+          ref={meshRefB}
+          args={[geometryB, material, count]}
+          frustumCulled={false}
+        >
+          <instancedBufferAttribute
+            attach="geometry-attributes-color"
+            args={[colorArray, 3]}
+          />
+        </instancedMesh>
+      )}
+    </>
+  );
+}
+
+export default function Vessels({ vessels }: VesselsProps) {
+  return (
+    <Suspense fallback={null}>
+      <VesselInstances vessels={vessels} />
+    </Suspense>
   );
 }

@@ -5,7 +5,7 @@ import { Suspense } from "react";
 
 function GlobeMesh() {
   const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
-  const texture = useTexture(`${basePath}/textures/earth_nightmap_8k.jpg`);
+  const texture = useTexture(`${basePath}/textures/earth_daymap_8k.jpg`);
 
   return (
     <mesh>
