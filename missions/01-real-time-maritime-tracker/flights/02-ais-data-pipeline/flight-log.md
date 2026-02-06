@@ -34,6 +34,12 @@ Flight 02 establishes the real-time AIS data pipeline connecting AISStream.io's 
 - **Completed**: 2026-02-06
 - **Summary**: Created useAISStream React hook (src/hooks/useAISStream.ts) that connects to /ws/ais via browser WebSocket, handles snapshot/position/static messages with requestAnimationFrame-based batching, reconnects with exponential backoff, and falls back to TEST_VESSELS on disconnect. Updated Vessels component to accept VesselPosition[] props with NaN heading fallback chain and dynamic InstancedMesh resizing via key={count}. Wired hook into GlobeScene outside Canvas (R3F context boundary). Exported processDownstreamMessage for pure-function testing. 7 unit tests for message processing. All 45 tests passing, zero TypeScript errors.
 
+### Leg 04: Live AIS Integration
+- **Status**: completed
+- **Started**: 2026-02-06
+- **Completed**: 2026-02-06
+- **Summary**: Created .env.local.example template with AISSTREAM_API_KEY and AIS_UPSTREAM_URL placeholders. Fixed .gitignore to not ignore the example file (added !.env.local.example negation after .env* glob). Documented AISStream.io registration at https://aisstream.io/. Manual verification requires user to register for free API key and set env vars before running dev:server. The pipeline is ready for live data: set AISSTREAM_API_KEY and AIS_UPSTREAM_URL=wss://stream.aisstream.io/v0/stream in shell, run dev:server.
+
 ---
 
 ## Decisions
