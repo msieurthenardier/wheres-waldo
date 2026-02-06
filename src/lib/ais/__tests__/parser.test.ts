@@ -164,10 +164,8 @@ describe("parsePositionReport", () => {
     expect(parsePositionReport(envelope)).toBeNull();
   });
 
-  it("returns null for wrong MessageType", () => {
-    const envelope = makePositionEnvelope({
-      messageType: "ShipStaticData",
-    });
+  it("returns null when no position data in Message", () => {
+    const envelope = makeStaticEnvelope();
     expect(parsePositionReport(envelope)).toBeNull();
   });
 

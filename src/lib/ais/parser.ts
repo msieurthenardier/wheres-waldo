@@ -1,4 +1,4 @@
-import type { AISStreamEnvelope, VesselPosition, VesselStatic } from "./types";
+import type { AISStreamEnvelope, PositionReport, VesselPosition, VesselStatic } from "./types";
 
 /**
  * Strip trailing "@" characters and whitespace from AIS string fields.
@@ -15,11 +15,10 @@ function stripAisPadding(value: string): string {
 export function parsePositionReport(
   envelope: AISStreamEnvelope
 ): VesselPosition | null {
-  if (envelope.MessageType !== "PositionReport") {
-    return null;
-  }
-
-  const report = envelope.Message.PositionReport;
+  // Accept both Class A (PositionReport) and Class B (StandardClassBCSPositionReport)
+  const report =
+    envelope.Message.PositionReport ??
+    (envelope.Message as Record<string, unknown>).StandardClassBCSPositionReport as PositionReport | undefined;
   if (!report || !report.Valid) {
     return null;
   }

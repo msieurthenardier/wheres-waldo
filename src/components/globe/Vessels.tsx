@@ -101,7 +101,7 @@ function VesselInstances({ vessels }: VesselsProps) {
         vessel.estimatedValueUsd > 0
           ? Math.min(2.0, 0.8 + Math.log10(vessel.estimatedValueUsd) / 10)
           : 1.0;
-      const base = 0.003 * valueScale;
+      const base = 0.00015 * valueScale;
       dummy.scale.set(base, base, base);
       dummy.updateMatrix();
 
