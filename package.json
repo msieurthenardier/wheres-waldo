@@ -5,9 +5,13 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "start": "next start",
+    "build:server": "esbuild src/server/index.ts --bundle --platform=node --format=cjs --outfile=.next/standalone/server.js --external:next --external:ws",
+    "start": "node .next/standalone/server.js",
     "lint": "next lint",
-    "test:screenshots": "playwright test"
+    "test:screenshots": "playwright test",
+    "test": "vitest run",
+    "dev:mock": "tsx src/server/mock-ais.ts",
+    "dev:server": "tsx --watch src/server/index.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10",
@@ -19,7 +23,8 @@
     "react": "^19",
     "react-dom": "^19",
     "tailwindcss": "^4.1.18",
-    "three": "^0.172"
+    "three": "^0.172",
+    "ws": "^8.19.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -28,8 +33,12 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/three": "^0.172",
+    "@types/ws": "^8.18.1",
+    "esbuild": "^0.27.3",
     "eslint": "^9",
     "eslint-config-next": "^15",
-    "typescript": "^5"
+    "tsx": "^4.21.0",
+    "typescript": "^5",
+    "vitest": "^4.0.18"
   }
 }

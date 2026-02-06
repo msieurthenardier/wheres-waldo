@@ -9,6 +9,7 @@ import Atmosphere from "@/components/globe/Atmosphere";
 import Vessels from "@/components/globe/Vessels";
 import PortMarkers from "@/components/globe/PortMarkers";
 import ShippingLanes from "@/components/globe/ShippingLanes";
+import { useAISStream } from "@/hooks/useAISStream";
 
 function ReadySignal() {
   const gl = useThree((state) => state.gl);
@@ -22,6 +23,8 @@ function ReadySignal() {
 }
 
 export default function GlobeScene() {
+  const { vessels } = useAISStream();
+
   return (
     <div className="h-full w-full">
       <Canvas
@@ -33,7 +36,7 @@ export default function GlobeScene() {
         <directionalLight position={[5, 3, 5]} intensity={1.2} />
         <Globe />
         <Atmosphere />
-        <Vessels />
+        <Vessels vessels={vessels} />
         <PortMarkers />
         <ShippingLanes />
         <OrbitControls

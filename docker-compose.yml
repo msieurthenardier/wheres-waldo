@@ -7,4 +7,6 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
+      - AISSTREAM_API_KEY=${AISSTREAM_API_KEY:-mock}
+      - AIS_UPSTREAM_URL=${AIS_UPSTREAM_URL:-wss://stream.aisstream.io/v0/stream}
     restart: unless-stopped

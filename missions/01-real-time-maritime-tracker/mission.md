@@ -64,7 +64,7 @@ Where's Waldo makes the invisible visible. It combines free AIS vessel tracking 
 > **Note:** These are tentative suggestions, not commitments. Flights are planned and created one at a time as work progresses. This list will evolve based on discoveries during implementation.
 
 - [x] Flight 01: **3D Globe Foundation** — Get a navigable 3D globe rendering in the browser with the command-center aesthetic. Evaluate CesiumJS vs Three.js. Render test ship models and port markers. Establish the visual language.
-- [ ] Flight 02: **AIS Data Pipeline** — Connect to AISStream.io WebSocket, parse AIS messages, store/relay vessel positions to the frontend. Backend architecture for real-time data flow.
+- [x] Flight 02: **AIS Data Pipeline** — Connect to AISStream.io WebSocket, parse AIS messages, store/relay vessel positions to the frontend. Backend architecture for real-time data flow.
 - [ ] Flight 03: **Value Estimation Engine** — Build the commodity classification and dollar-value estimation system. Map vessel types and routes to commodities. Integrate UN Comtrade / USGS data for value weighting.
 - [ ] Flight 04: **Ships, Ports & Paths** — Render real vessels as scaled 3D models, ports as scaled nodes, and shipping routes as path arcs. Apply value-based sizing to all three.
 - [ ] Flight 05: **Search, Filter & Detail Panels** — Top panel with commodity filters and search. Right sidebar with vessel/port/route detail views. Global statistics overlay.
