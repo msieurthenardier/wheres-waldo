@@ -1,116 +1,188 @@
 import { describe, it, expect } from "vitest";
-import { processDownstreamMessage } from "../useAISStream";
-import type { EnrichedVesselPosition } from "@/lib/ais";
+import { processAISEnvelope } from "../useAISStream";
+import { VesselStore } from "@/lib/ais";
+import type { AISStreamEnvelope } from "@/lib/ais";
 
-function makePosition(overrides: Partial<EnrichedVesselPosition> = {}): EnrichedVesselPosition {
+function makePositionEnvelope(
+  overrides: Partial<{
+    mmsi: number;
+    lat: number;
+    lon: number;
+    cog: number;
+    sog: number;
+    heading: number;
+    shipName: string;
+  }> = {}
+): AISStreamEnvelope {
+  const mmsi = overrides.mmsi ?? 200000001;
   return {
-    mmsi: "200000001",
-    lat: 35.0,
-    lon: -160.0,
-    cog: 270,
-    sog: 14,
-    heading: 268,
-    navStatus: 0,
-    timestamp: Date.now(),
-    shipName: "TEST VESSEL",
-    commodity: null,
-    estimatedValueUsd: 0,
-    ...overrides,
+    MessageType: "PositionReport",
+    Message: {
+      PositionReport: {
+        Latitude: overrides.lat ?? 35.0,
+        Longitude: overrides.lon ?? -160.0,
+        Cog: overrides.cog ?? 2700, // 1/10 degree
+        Sog: overrides.sog ?? 140, // 1/10 knot
+        TrueHeading: overrides.heading ?? 268,
+        NavigationalStatus: 0,
+        MessageID: 1,
+        UserID: mmsi,
+        Valid: true,
+        RateOfTurn: 0,
+        PositionAccuracy: true,
+        Raim: false,
+        Timestamp: 30,
+        Spare: 0,
+        SpecialManoeuvreIndicator: 0,
+        RepeatIndicator: 0,
+        CommunicationState: 0,
+      },
+    },
+    MetaData: {
+      MMSI: mmsi,
+      MMSI_String: String(mmsi),
+      ShipName: overrides.shipName ?? "TEST VESSEL",
+      latitude: overrides.lat ?? 35.0,
+      longitude: overrides.lon ?? -160.0,
+      time_utc: new Date().toISOString(),
+    },
   };
 }
 
-describe("processDownstreamMessage", () => {
-  it("replaces vessel map on snapshot", () => {
-    const existing = new Map<string, EnrichedVesselPosition>();
-    existing.set("old", makePosition({ mmsi: "old" }));
+function makeStaticEnvelope(
+  overrides: Partial<{
+    mmsi: number;
+    name: string;
+    shipType: number;
+    destination: string;
+  }> = {}
+): AISStreamEnvelope {
+  const mmsi = overrides.mmsi ?? 200000001;
+  return {
+    MessageType: "ShipStaticData",
+    Message: {
+      ShipStaticData: {
+        AisVersion: 0,
+        CallSign: "ABCD",
+        Destination: overrides.destination ?? "SHANGHAI",
+        Dimension: { A: 100, B: 100, C: 20, D: 20 },
+        Dte: 0,
+        Eta: { Month: 3, Day: 15, Hour: 12, Minute: 0 },
+        FixType: 1,
+        ImoNumber: 9000000,
+        MaximumStaticDraught: 120, // 12.0m in 1/10 meter
+        MessageID: 5,
+        Name: overrides.name ?? "TEST VESSEL",
+        RepeatIndicator: 0,
+        Spare: false,
+        Type: overrides.shipType ?? 70, // Cargo
+        UserID: mmsi,
+        Valid: true,
+      },
+    },
+    MetaData: {
+      MMSI: mmsi,
+      MMSI_String: String(mmsi),
+      ShipName: overrides.name ?? "TEST VESSEL",
+      latitude: 35.0,
+      longitude: -160.0,
+      time_utc: new Date().toISOString(),
+    },
+  };
+}
 
-    const v1 = makePosition({ mmsi: "111" });
-    const v2 = makePosition({ mmsi: "222" });
+describe("processAISEnvelope", () => {
+  it("processes PositionReport and adds to store", () => {
+    const store = new VesselStore();
+    const envelope = makePositionEnvelope({ mmsi: 200000001 });
 
-    const result = processDownstreamMessage(existing, {
-      type: "snapshot",
-      data: [v1, v2],
-    });
+    const changed = processAISEnvelope(store, envelope);
 
-    expect(result).not.toBeNull();
-    expect(result!.size).toBe(2);
-    expect(result!.has("111")).toBe(true);
-    expect(result!.has("222")).toBe(true);
-    expect(result!.has("old")).toBe(false);
+    expect(changed).toBe(true);
+    expect(store.size).toBe(1);
+    const record = store.get("200000001");
+    expect(record).toBeDefined();
+    expect(record!.position!.lat).toBe(35.0);
   });
 
-  it("handles empty snapshot", () => {
-    const existing = new Map<string, EnrichedVesselPosition>();
-    existing.set("old", makePosition({ mmsi: "old" }));
+  it("processes ShipStaticData and enriches vessel", () => {
+    const store = new VesselStore();
 
-    const result = processDownstreamMessage(existing, {
-      type: "snapshot",
-      data: [],
-    });
+    // First add a position
+    processAISEnvelope(store, makePositionEnvelope({ mmsi: 200000001 }));
 
-    expect(result).not.toBeNull();
-    expect(result!.size).toBe(0);
+    // Then add static data (with destination that matches a commodity port)
+    const changed = processAISEnvelope(
+      store,
+      makeStaticEnvelope({ mmsi: 200000001, destination: "SHANGHAI" })
+    );
+
+    expect(changed).toBe(true);
+    const record = store.get("200000001");
+    expect(record).toBeDefined();
+    expect(record!.static).not.toBeNull();
+    expect(record!.enrichment).not.toBeNull();
   });
 
-  it("upserts vessel on position update", () => {
-    const existing = new Map<string, EnrichedVesselPosition>();
-    existing.set("111", makePosition({ mmsi: "111", lat: 30 }));
+  it("returns false for unknown message types", () => {
+    const store = new VesselStore();
+    const envelope: AISStreamEnvelope = {
+      MessageType: "UnknownMessage",
+      Message: {},
+      MetaData: {
+        MMSI: 200000001,
+        MMSI_String: "200000001",
+        ShipName: "TEST",
+        latitude: 35.0,
+        longitude: -160.0,
+        time_utc: new Date().toISOString(),
+      },
+    };
 
-    const updated = makePosition({ mmsi: "111", lat: 31 });
-    const result = processDownstreamMessage(existing, {
-      type: "position",
-      data: updated,
-    });
-
-    expect(result).not.toBeNull();
-    expect(result!.get("111")!.lat).toBe(31);
+    const changed = processAISEnvelope(store, envelope);
+    expect(changed).toBe(false);
+    expect(store.size).toBe(0);
   });
 
-  it("adds new vessel on position update", () => {
-    const existing = new Map<string, EnrichedVesselPosition>();
-    existing.set("111", makePosition({ mmsi: "111" }));
+  it("updates existing vessel position", () => {
+    const store = new VesselStore();
 
-    const newVessel = makePosition({ mmsi: "222", lat: 40 });
-    const result = processDownstreamMessage(existing, {
-      type: "position",
-      data: newVessel,
-    });
+    processAISEnvelope(store, makePositionEnvelope({ mmsi: 200000001, lat: 35.0 }));
+    processAISEnvelope(store, makePositionEnvelope({ mmsi: 200000001, lat: 36.0 }));
 
-    expect(result).not.toBeNull();
-    expect(result!.size).toBe(2);
-    expect(result!.has("222")).toBe(true);
+    expect(store.size).toBe(1);
+    expect(store.get("200000001")!.position!.lat).toBe(36.0);
   });
 
-  it("does not modify original map on position update", () => {
-    const existing = new Map<string, EnrichedVesselPosition>();
-    existing.set("111", makePosition({ mmsi: "111" }));
+  it("tracks multiple vessels independently", () => {
+    const store = new VesselStore();
 
-    processDownstreamMessage(existing, {
-      type: "position",
-      data: makePosition({ mmsi: "222" }),
-    });
+    processAISEnvelope(store, makePositionEnvelope({ mmsi: 200000001 }));
+    processAISEnvelope(store, makePositionEnvelope({ mmsi: 200000002 }));
 
-    expect(existing.size).toBe(1);
-    expect(existing.has("222")).toBe(false);
+    expect(store.size).toBe(2);
   });
 
-  it("returns null for static messages", () => {
-    const existing = new Map<string, EnrichedVesselPosition>();
-    const result = processDownstreamMessage(existing, {
-      type: "static",
-      data: { mmsi: "111", name: "TEST" },
-    });
+  it("re-enriches when static data arrives after position", () => {
+    const store = new VesselStore();
 
-    expect(result).toBeNull();
-  });
+    // Position first (gets low-confidence enrichment)
+    processAISEnvelope(store, makePositionEnvelope({ mmsi: 200000001 }));
+    const firstEnrichment = store.get("200000001")!.enrichment;
 
-  it("returns null for unknown message types", () => {
-    const existing = new Map<string, EnrichedVesselPosition>();
-    const result = processDownstreamMessage(existing, {
-      type: "unknown" as "snapshot",
-      data: {},
-    });
+    // Static data with known destination (should re-enrich with higher confidence)
+    processAISEnvelope(
+      store,
+      makeStaticEnvelope({
+        mmsi: 200000001,
+        shipType: 70,
+        destination: "SHANGHAI",
+      })
+    );
+    const secondEnrichment = store.get("200000001")!.enrichment;
 
-    expect(result).toBeNull();
+    expect(secondEnrichment).not.toBeNull();
+    // Static-based enrichment should have commodity classification
+    expect(secondEnrichment!.commodity).not.toBeNull();
   });
 });
