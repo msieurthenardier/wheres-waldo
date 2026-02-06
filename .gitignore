@@ -1,0 +1,32 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# next.js
+.next/
+out/
+
+# testing
+test-artifacts/
+test-results/
+playwright-report/
+
+# production
+build/
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+
+# env
+.env*
+.env.local
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
