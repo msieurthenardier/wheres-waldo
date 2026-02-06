@@ -1,6 +1,6 @@
 # Leg: 01-project-scaffold
 
-**Status**: in-progress
+**Status**: completed
 **Flight**: [3D Globe Foundation](../flight.md)
 
 ## Objective

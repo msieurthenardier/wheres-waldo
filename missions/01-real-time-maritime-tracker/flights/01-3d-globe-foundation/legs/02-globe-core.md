@@ -1,6 +1,6 @@
 # Leg: 02-globe-core
 
-**Status**: queued
+**Status**: completed
 **Flight**: [3D Globe Foundation](../flight.md)
 
 ## Objective

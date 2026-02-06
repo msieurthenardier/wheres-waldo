@@ -1,6 +1,6 @@
 # Leg: 03-command-center-chrome
 
-**Status**: queued
+**Status**: completed
 **Flight**: [3D Globe Foundation](../flight.md)
 
 ## Objective

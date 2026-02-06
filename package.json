@@ -1,0 +1,35 @@
+{
+  "name": "wheres-waldo",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test:screenshots": "playwright test"
+  },
+  "dependencies": {
+    "@react-three/drei": "^10",
+    "@react-three/fiber": "^9",
+    "@react-three/postprocessing": "^3",
+    "@tailwindcss/postcss": "^4.1.18",
+    "next": "^15",
+    "postcss": "^8.5.6",
+    "react": "^19",
+    "react-dom": "^19",
+    "tailwindcss": "^4.1.18",
+    "three": "^0.172"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.58.1",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/three": "^0.172",
+    "eslint": "^9",
+    "eslint-config-next": "^15",
+    "typescript": "^5"
+  }
+}

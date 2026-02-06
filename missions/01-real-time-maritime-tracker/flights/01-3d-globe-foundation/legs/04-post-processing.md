@@ -1,6 +1,6 @@
 # Leg: 04-post-processing
 
-**Status**: queued
+**Status**: completed
 **Flight**: [3D Globe Foundation](../flight.md)
 
 ## Objective

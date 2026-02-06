@@ -1,0 +1,12 @@
+.git
+node_modules
+.next
+test-artifacts
+test-results
+tests
+playwright-report
+.flight-ops
+missions
+*.md
+!README.md
+.env*

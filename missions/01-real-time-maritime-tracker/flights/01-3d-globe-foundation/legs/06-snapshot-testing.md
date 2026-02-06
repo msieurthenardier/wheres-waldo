@@ -1,6 +1,6 @@
 # Leg: 06-snapshot-testing
 
-**Status**: queued
+**Status**: in-progress
 **Flight**: [3D Globe Foundation](../flight.md)
 
 ## Objective

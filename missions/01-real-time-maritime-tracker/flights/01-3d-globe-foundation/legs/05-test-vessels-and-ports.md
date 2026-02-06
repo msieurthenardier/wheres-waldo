@@ -1,6 +1,6 @@
 # Leg: 05-test-vessels-and-ports
 
-**Status**: queued
+**Status**: completed
 **Flight**: [3D Globe Foundation](../flight.md)
 
 ## Objective
