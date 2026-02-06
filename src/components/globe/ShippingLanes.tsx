@@ -3,13 +3,7 @@
 import { Line } from "@react-three/drei";
 import { useMemo } from "react";
 import { greatCirclePoints } from "@/lib/geo";
-import { TEST_LANES, TEST_PORTS } from "@/data/test-markers";
-
-const LANE_COLORS: Record<string, string> = {
-  semiconductors: "#00fff2",
-  electronics: "#0ea5e9",
-  mixed: "#a78bfa",
-};
+import { getTradeRoutes } from "@/lib/commodity";
 
 function LaneArc({
   fromLat,
@@ -41,31 +35,20 @@ function LaneArc({
 }
 
 export default function ShippingLanes() {
-  const portMap = useMemo(() => {
-    const map = new Map<string, (typeof TEST_PORTS)[0]>();
-    for (const port of TEST_PORTS) {
-      map.set(port.name, port);
-    }
-    return map;
-  }, []);
+  const routes = useMemo(() => getTradeRoutes(), []);
 
   return (
     <group>
-      {TEST_LANES.map((lane) => {
-        const from = portMap.get(lane.from);
-        const to = portMap.get(lane.to);
-        if (!from || !to) return null;
-        return (
-          <LaneArc
-            key={`${lane.from}-${lane.to}`}
-            fromLat={from.lat}
-            fromLon={from.lon}
-            toLat={to.lat}
-            toLon={to.lon}
-            color={LANE_COLORS[lane.commodity] || "#00fff2"}
-          />
-        );
-      })}
+      {routes.map((route) => (
+        <LaneArc
+          key={`${route.fromName}-${route.toName}-${route.commodity}`}
+          fromLat={route.fromLat}
+          fromLon={route.fromLon}
+          toLat={route.toLat}
+          toLon={route.toLon}
+          color={route.color}
+        />
+      ))}
     </group>
   );
 }
