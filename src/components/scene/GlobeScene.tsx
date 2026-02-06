@@ -43,7 +43,7 @@ export default function GlobeScene() {
           enableDamping
           dampingFactor={0.05}
           autoRotate
-          autoRotateSpeed={0.3}
+          autoRotateSpeed={0.003}
         />
         <EffectComposer multisampling={0}>
           <Bloom
