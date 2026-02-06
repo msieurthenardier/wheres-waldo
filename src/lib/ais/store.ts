@@ -22,6 +22,7 @@ export class VesselStore {
       this.vessels.set(position.mmsi, {
         position,
         static: null,
+        enrichment: null,
         lastUpdate: position.timestamp,
       });
       return true;
@@ -46,6 +47,7 @@ export class VesselStore {
       this.vessels.set(staticData.mmsi, {
         position: null,
         static: staticData,
+        enrichment: null,
         lastUpdate: staticData.timestamp,
       });
       return true;

@@ -3,10 +3,20 @@
 import { useRef, useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { latLonToVector3 } from "@/lib/geo";
-import type { VesselPosition } from "@/lib/ais";
+import type { EnrichedVesselPosition } from "@/lib/ais";
+import { COMMODITIES } from "@/lib/commodity";
+
+const DEFAULT_COLOR = new THREE.Color("#00fff2");
+
+function getCommodityColor(commodity: string | null): THREE.Color {
+  if (!commodity) return DEFAULT_COLOR;
+  const info = COMMODITIES[commodity as keyof typeof COMMODITIES];
+  if (!info) return DEFAULT_COLOR;
+  return new THREE.Color(info.color);
+}
 
 interface VesselsProps {
-  vessels: VesselPosition[];
+  vessels: EnrichedVesselPosition[];
 }
 
 export default function Vessels({ vessels }: VesselsProps) {
@@ -15,14 +25,14 @@ export default function Vessels({ vessels }: VesselsProps) {
 
   const colorArray = useMemo(() => {
     const arr = new Float32Array(count * 3);
-    const defaultColor = new THREE.Color("#00fff2");
     for (let i = 0; i < count; i++) {
-      arr[i * 3] = defaultColor.r;
-      arr[i * 3 + 1] = defaultColor.g;
-      arr[i * 3 + 2] = defaultColor.b;
+      const color = getCommodityColor(vessels[i].commodity);
+      arr[i * 3] = color.r;
+      arr[i * 3 + 1] = color.g;
+      arr[i * 3 + 2] = color.b;
     }
     return arr;
-  }, [count]);
+  }, [vessels, count]);
 
   useEffect(() => {
     if (!meshRef.current) return;
@@ -56,7 +66,13 @@ export default function Vessels({ vessels }: VesselsProps) {
       dummy.lookAt(lookTarget);
       dummy.rotateX(Math.PI / 2);
 
-      dummy.scale.set(0.012, 0.025, 0.012);
+      // Scale by estimated value (larger vessels = bigger markers)
+      const valueScale = vessel.estimatedValueUsd > 0
+        ? Math.min(2.0, 0.8 + Math.log10(vessel.estimatedValueUsd) / 10)
+        : 1.0;
+      const base = 0.012 * valueScale;
+      const height = 0.025 * valueScale;
+      dummy.scale.set(base, height, base);
       dummy.updateMatrix();
       meshRef.current!.setMatrixAt(i, dummy.matrix);
     });
@@ -71,8 +87,8 @@ export default function Vessels({ vessels }: VesselsProps) {
       <coneGeometry args={[1, 2, 6]} />
       <meshStandardMaterial
         vertexColors
-        emissive="#00fff2"
-        emissiveIntensity={0.5}
+        emissive="#ffffff"
+        emissiveIntensity={0.3}
       />
       <instancedBufferAttribute
         attach="geometry-attributes-color"
